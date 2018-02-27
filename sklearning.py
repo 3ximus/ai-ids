@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 import pickle
 from sklearn.model_selection import train_test_split

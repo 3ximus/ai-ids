@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import pandas
 filename = "csv/Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv"
 df = pandas.read_csv(filename)
