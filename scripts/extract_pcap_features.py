@@ -25,7 +25,7 @@ ip_flags = {
 infile = open(sys.argv[1],"r")
 pkts = rdpcap(infile)
 infile.close()
-outfile = open("pcap/pcapdataset.txt","w")
+outfile = open(sys.argv[2],"w")
 npkt=0
 for i,p in enumerate(pkts):
     # TCP FLAGS
