@@ -136,7 +136,6 @@ print("-------------------------------------------------------------------------
 #print(clf.best_params_)
 
 # DEFINE MODEL
-#clf = MLPClassifier(activation='identity', solver='lbfgs', hidden_layer_sizes=(1)) <-- parametros encontrados pela grid search, mas so ira servir quando os datasets reais estiverem prontos
 clf = MLPClassifier(activation='relu', solver='adam', alpha=1e-5, hidden_layer_sizes=(16), random_state=1) # adam porque o dataset tem milhares de exemplos
 #print(clf)
 # TRAIN MODEL
