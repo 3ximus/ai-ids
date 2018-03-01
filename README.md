@@ -27,7 +27,7 @@
 
 |Type|Count|
 |---|---|
-|B|ENIGN    529918|
+|BENIGN   |    529918|
 
 `DATASETS/ISCX/Thursday-WorkingHours-Afternoon-Infilteration-flow.csv`
 
@@ -58,7 +58,7 @@
 ### TOTAL NUMBER OF FLOWS
 
 - malign 469274
-- benign 2007193
+- benign 2191103
 
 ## Useful Labels
 
