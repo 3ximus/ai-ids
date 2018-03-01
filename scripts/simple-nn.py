@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import numpy as np
 import pickle, sys
 from sklearn.model_selection import train_test_split
@@ -8,8 +7,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import Normalizer
 
-#from keras.models import Sequential
-#from keras.layers import Activation,Dense
+#USAGE: simple-nn training_dataset.csv testing_dataset.csv
 
 param_grid = [
     {
@@ -20,6 +18,7 @@ param_grid = [
         ]
     }
 ]
+
 def save_model(filename, clfmodel):
     # save the model to disk
     filename = 'clf.sav'
@@ -48,7 +47,7 @@ def parse_csvdataset(filename):
 			y_in.append(y_tmp)
 	return x_in, y_in
 
-def print_stats(y_predicted_lst):
+def print_stats(y_predicted_lst, y_test_lst):
     DDoS = [1] + [0]*10
     PortScan = [0] + [1] + [0]*9
     Bot = [0]*2 + [1] + [0]*8
@@ -61,17 +60,17 @@ def print_stats(y_predicted_lst):
     DoS_Slowhttptest = [0]*9 + [1] + [0]
     Heartbleed = [0]*10 + [1]
 
-    print "DDoS: ", str(y_predicted_lst.count(DDoS)), "predicted out of", str(y_predicted_lst.count(DDoS)), "test values"
-    print "PortScan: ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_predicted_lst.count(PortScan)), "test values"
-    print "Bot: ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_predicted_lst.count(Bot)), "test values"
-    print "Infiltration: ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_predicted_lst.count(Infiltration)), "test values"
-    print "FTP-Patator: ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_predicted_lst.count(FTP_Patator)), "test values"
-    print "SSH-Patator: ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_predicted_lst.count(SSH_Patator)), "test values"
-    print "DoS-Hulk: ", str(y_predicted_lst.count(DoS_Hulk)), "predicted out of", str(y_predicted_lst.count(DoS_Hulk)), "test values"
-    print "DoS-GoldenEye: ", str(y_predicted_lst.count(DoS_GoldenEye)), "predicted out of", str(y_predicted_lst.count(DoS_GoldenEye)), "test values"
-    print "DoS-slowloris: ", str(y_predicted_lst.count(DoS_slowloris)), "predicted out of", str(y_predicted_lst.count(DoS_slowloris)), "test values"
-    print "DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_predicted_lst.count(DoS_Slowhttptest)), "test values"
-    print "Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_predicted_lst.count(Heartbleed)), "test values"
+    print "DDoS: ", str(y_predicted_lst.count(DDoS)), "predicted out of", str(y_test_lst.count(DDoS)), "test values"
+    print "PortScan: ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values"
+    print "Bot: ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values"
+    print "Infiltration: ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values"
+    print "FTP-Patator: ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values"
+    print "SSH-Patator: ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values"
+    print "DoS-Hulk: ", str(y_predicted_lst.count(DoS_Hulk)), "predicted out of", str(y_test_lst.count(DoS_Hulk)), "test values"
+    print "DoS-GoldenEye: ", str(y_predicted_lst.count(DoS_GoldenEye)), "predicted out of", str(y_test_lst.count(DoS_GoldenEye)), "test values"
+    print "DoS-slowloris: ", str(y_predicted_lst.count(DoS_slowloris)), "predicted out of", str(y_test_lst.count(DoS_slowloris)), "test values"
+    print "DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_test_lst.count(DoS_Slowhttptest)), "test values"
+    print "Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values"
 
     print ""
     i=0
@@ -81,15 +80,16 @@ def print_stats(y_predicted_lst):
         #if(elem!=[1] + [0]*10 and elem!=[0] + [1] + [0]*9):
         #    print(elem)
     if i!=0:
-        print "The NN behavior must be dealt with. The NN can only turn on one output node on each output. Wrong output count: ", i
+        print "The NN behavior must be dealt with. The NN should only turn on one output node on each output. Wrong output count: ", i
 
-#input_lst = parse_pcapdataset("pcap/pcapdataset.txt")
+# input_lst = parse_pcapdataset("pcap/pcapdataset.txt")
 # testpcap_input = parse_pcapdataset("pcap/pcapdataset.txt")
-input_lst, result_lst = parse_csvdataset(sys.argv[1])
-input_lst_X = np.array(input_lst, dtype='float64')
-input_lst_y = np.array(result_lst, dtype='float64')
+X_train, y_train = parse_csvdataset(sys.argv[1])
+X_train = np.array(X_train, dtype='float64')
+y_train = np.array(y_train, dtype='float64')
+
 # train_test_split is not working as expected
-X_train, X_test, y_train, y_test = train_test_split(input_lst_X, input_lst_y, test_size=0.25, random_state=42,stratify=input_lst_y)
+# X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
 
 # FIND THE BEST PARAMETERS BASED ON TRAINING INPUT USING A GRID_SEARCH
 #MultilayerPerceptron = MLPClassifier()
@@ -100,17 +100,19 @@ X_train, X_test, y_train, y_test = train_test_split(input_lst_X, input_lst_y, te
 #print(clf)
 
 # DEFINE MODEL
-clf = MLPClassifier(activation='tanh', solver='adam', alpha=1e-5, hidden_layer_sizes=(16), random_state=1) # adam porque o dataset tem milhares de exemplos
+clf = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(16), random_state=1) # adam porque o dataset tem milhares de exemplos
 #print(clf)
 
 # TRAIN MODEL
-print("Training")
+print("Training...")
 clf.fit(X_train, y_train)
 
 # PREDICT VALUES BASED ON THE GIVEN INPUT
-print("Predicting")
+print("Predicting...\n")
 
-parse_realcsvdataset
+X_test, y_test = parse_csvdataset(sys.argv[2])
+X_test = np.array(X_test, dtype='float64')
+y_test = np.array(y_test, dtype='float64')
 y_predicted = clf.predict(X_test)
 #print(y_predicted)
 
@@ -126,4 +128,4 @@ print("MLP Correctly Classified: " + str(accuracy_score(y_test, y_predicted,norm
 print("MLP Accuracy (sklearn): " + str(accuracy_score(y_test, y_predicted,normalize=True)))
 
 # LOOK AT PREDICTED VALUES AND PRINT STATS
-print_stats(y_predicted.tolist())
+print_stats(y_predicted.tolist(), y_test.tolist())
