@@ -3,9 +3,12 @@
 import pandas, sys
 for fd in sys.argv[1:]:
     df = pandas.read_csv(fd)
-    labels = df[" Label"]
-    print(fd)
-    print(labels.value_counts())
+    labels = df[[" Label"," Flow Duration"]]
+    print(labels[1:])
+    #print(df.info())
+    #print(df.describe())
+    #print(fd)
+    #print(labels.value_counts())
 
 # FINflag = df["FIN Flag Count"]
 # SYNflag = df[" SYN Flag Count"]
