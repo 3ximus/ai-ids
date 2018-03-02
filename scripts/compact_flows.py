@@ -40,7 +40,7 @@ with open(args.files[-1], 'w') as of:
 
 # NOTA: nao funciona diretamente com os .csv disponibilizados, so pelos criados pelo CICFlowMeter. 
 # Para funcionar com os .csv criados por eles tem que se editar os titulos dos .csv para corresponderem
-# aos criados pelo programa, ou seja, com abreviaturas, sem espacos e sem a coluna 'FwdHeaderLength'
+# aos criados pelo programa, ou seja, com abreviaturas, sem espacos e sem a coluna ' Fwd Header Length'
 
 # DATASETS DISPONIBILIZADOS: 84 features + 1 feature (no caso do DDoS, 'External IP')
 # DATASETS A SER CRIADOS: 83 features, nao incluem em caso algum o atributo 'External IP'

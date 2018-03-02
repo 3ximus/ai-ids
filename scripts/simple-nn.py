@@ -35,19 +35,25 @@ def load_model(filename):
     return loaded_model
 
 def parse_csvdataset(filename):
-	x_in = []
-	y_in = []
-	outputs = {"DDoS": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "DoS Hulk": 6, "DoS GoldenEye": 7, "DoS slowloris": 8, "DoS Slowhttptest": 9, "Heartbleed": 10}
-	with open(filename, 'r') as fd:
-		for line in fd:
-			tmp = line.strip('\n').split(',')
-			x_in.append(tmp[1:-1])       # the 9 extracted features
-			y_tmp = [0] * 11
-			y_tmp[outputs[tmp[-1]]] = 1  # choose result based on label
-			y_in.append(y_tmp)
-	return x_in, y_in
+    x_in = []
+    y_in = []
+    #outputs = {"DDoS": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "DoS Hulk": 6, "DoS GoldenEye": 7, "DoS slowloris": 8, "DoS Slowhttptest": 9, "Heartbleed": 10}
+    outputs = {"DoS-Attack": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "Heartbleed": 6}
+    with open(filename, 'r') as fd:
+        for line in fd:
+            tmp = line.strip('\n').split(',')
+            x_in.append(tmp[1:-1])       # the 9 extracted features
+            #y_tmp = [0] * 11
+            y_tmp = [0] * 7
+            tmp_last = tmp[-1]
+            if tmp_last=="BENIGN": tmp[-1]="Heartbleed"      # testing purposes
+            if tmp_last=="DDoS" or tmp_last=="DoS Hulk" or tmp_last=="DoS GoldenEye" or tmp_last=="DoS slowloris" or tmp_last=="DoS Slowhttptest": tmp[-1]="DoS-Attack"
+            y_tmp[outputs[tmp[-1]]] = 1  # choose result based on label
+            y_in.append(y_tmp)
+    return x_in, y_in
 
 def print_stats(y_predicted_lst, y_test_lst):
+    '''
     DDoS = [1] + [0]*10
     PortScan = [0] + [1] + [0]*9
     Bot = [0]*2 + [1] + [0]*8
@@ -71,6 +77,22 @@ def print_stats(y_predicted_lst, y_test_lst):
     print "DoS-slowloris: ", str(y_predicted_lst.count(DoS_slowloris)), "predicted out of", str(y_test_lst.count(DoS_slowloris)), "test values"
     print "DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_test_lst.count(DoS_Slowhttptest)), "test values"
     print "Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values"
+    '''
+    DoS_Attack = [1] + [0]*6
+    PortScan = [0] + [1] + [0]*5
+    Bot = [0]*2 + [1] + [0]*4
+    Infiltration = [0]*3 + [1] + [0]*3
+    FTP_Patator = [0]*4 + [1] + [0]*2
+    SSH_Patator = [0]*5 + [1] + [0]
+    Heartbleed = [0]*6 + [1]
+
+    print "DoS-Attack (train: 294496 flows): ", str(y_predicted_lst.count(DoS_Attack)), "predicted out of", str(y_test_lst.count(DoS_Attack)), "test values"
+    print "PortScan (train: 158930 flows): ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values"
+    print "Bot (train: 1966 flows): ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values"
+    print "Infiltration (train: 36 flows): ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values"
+    print "FTP-Patator (train: 7938 flows): ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values"
+    print "SSH-Patator (train: 5897 flows): ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values"
+    print "Heartbleed (train: 11 flows): ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values"
 
     print ""
     i=0
@@ -117,7 +139,7 @@ y_predicted = clf.predict(X_test)
 #print(y_predicted)
 
 # SAVE MODEL, LOAD MODEL
-save_model('clf.sav', clf)
+#save_model('clf.sav', clf)
 #clfmodel = load_model('clf.sav')
 #y_predicted = clfmodel.predict(X_test)
 #result = clfmodel.score(X_test, y_test)
