@@ -1,5 +1,11 @@
 */*__pycache__
-csv/*
 */*.pyc
+
+# data
+csv/*
 pcap/*
 flows/*
+
+# virtual environment
+IDS/*
+

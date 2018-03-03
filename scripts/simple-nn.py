@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import numpy as np
 import pickle, sys
 from sklearn.model_selection import train_test_split
@@ -66,17 +67,17 @@ def print_stats(y_predicted_lst, y_test_lst):
     DoS_Slowhttptest = [0]*9 + [1] + [0]
     Heartbleed = [0]*10 + [1]
 
-    print "DDoS: ", str(y_predicted_lst.count(DDoS)), "predicted out of", str(y_test_lst.count(DDoS)), "test values"
-    print "PortScan: ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values"
-    print "Bot: ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values"
-    print "Infiltration: ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values"
-    print "FTP-Patator: ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values"
-    print "SSH-Patator: ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values"
-    print "DoS-Hulk: ", str(y_predicted_lst.count(DoS_Hulk)), "predicted out of", str(y_test_lst.count(DoS_Hulk)), "test values"
-    print "DoS-GoldenEye: ", str(y_predicted_lst.count(DoS_GoldenEye)), "predicted out of", str(y_test_lst.count(DoS_GoldenEye)), "test values"
-    print "DoS-slowloris: ", str(y_predicted_lst.count(DoS_slowloris)), "predicted out of", str(y_test_lst.count(DoS_slowloris)), "test values"
-    print "DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_test_lst.count(DoS_Slowhttptest)), "test values"
-    print "Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values"
+    print("DDoS: ", str(y_predicted_lst.count(DDoS)), "predicted out of", str(y_test_lst.count(DDoS)), "test values")
+    print("PortScan: ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values")
+    print("Bot: ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values")
+    print("Infiltration: ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values")
+    print("FTP-Patator: ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
+    print("SSH-Patator: ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
+    print("DoS-Hulk: ", str(y_predicted_lst.count(DoS_Hulk)), "predicted out of", str(y_test_lst.count(DoS_Hulk)), "test values")
+    print("DoS-GoldenEye: ", str(y_predicted_lst.count(DoS_GoldenEye)), "predicted out of", str(y_test_lst.count(DoS_GoldenEye)), "test values")
+    print("DoS-slowloris: ", str(y_predicted_lst.count(DoS_slowloris)), "predicted out of", str(y_test_lst.count(DoS_slowloris)), "test values")
+    print("DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_test_lst.count(DoS_Slowhttptest)), "test values")
+    print("Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
     '''
     DoS_Attack = [1] + [0]*6
     PortScan = [0] + [1] + [0]*5
@@ -86,15 +87,15 @@ def print_stats(y_predicted_lst, y_test_lst):
     SSH_Patator = [0]*5 + [1] + [0]
     Heartbleed = [0]*6 + [1]
 
-    print "DoS-Attack (train: 294496 flows): ", str(y_predicted_lst.count(DoS_Attack)), "predicted out of", str(y_test_lst.count(DoS_Attack)), "test values"
-    print "PortScan (train: 158930 flows): ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values"
-    print "Bot (train: 1966 flows): ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values"
-    print "Infiltration (train: 36 flows): ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values"
-    print "FTP-Patator (train: 7938 flows): ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values"
-    print "SSH-Patator (train: 5897 flows): ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values"
-    print "Heartbleed (train: 11 flows): ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values"
+    print("DoS-Attack (train: 294496 flows): ", str(y_predicted_lst.count(DoS_Attack)), "predicted out of", str(y_test_lst.count(DoS_Attack)), "test values")
+    print("PortScan (train: 158930 flows): ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values")
+    print("Bot (train: 1966 flows): ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values")
+    print("Infiltration (train: 36 flows): ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values")
+    print("FTP-Patator (train: 7938 flows): ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
+    print("SSH-Patator (train: 5897 flows): ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
+    print("Heartbleed (train: 11 flows): ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
 
-    print ""
+    print("")
     i=0
     for elem in y_predicted_lst:
         if(elem.count(1)!=1):
@@ -102,7 +103,7 @@ def print_stats(y_predicted_lst, y_test_lst):
         #if(elem!=[1] + [0]*10 and elem!=[0] + [1] + [0]*9):
         #    print(elem)
     if i!=0:
-        print "The NN behavior must be dealt with. The NN should only turn on one output node on each output. Wrong output count: ", i
+        print("The NN behavior must be dealt with. The NN should only turn on one output node on each output. Wrong output count: ", i)
 
 # input_lst = parse_pcapdataset("pcap/pcapdataset.txt")
 # testpcap_input = parse_pcapdataset("pcap/pcapdataset.txt")
