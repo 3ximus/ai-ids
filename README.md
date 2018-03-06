@@ -62,15 +62,15 @@
 
 ## Useful Labels
 
-Flow Duration
-Total Fwd Packets
-Total Backward Packets
-Total Length of Fwd Packets
-Total Length of Bwd Packets
-Fwd Packets/s
-Bwd Packets/s
-Fwd IAT Mean
-Bwd IAT Mean
+- Flow Duration
+- Total Fwd Packets
+- Total Backward Packets
+- Total Length of Fwd Packets
+- Total Length of Bwd Packets
+- Fwd Packets/s
+- Bwd Packets/s
+- Fwd IAT Mean
+- Bwd IAT Mean
 
 
 ## Label Meanings
