@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import GridSearchCV
+from sklearn import preprocessing
 from sklearn.preprocessing import Normalizer
 
 #USAGE: simple-nn training_dataset.csv testing_dataset.csv
@@ -43,6 +44,7 @@ def parse_csvdataset(filename):
         for line in fd:
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])       # the 9 extracted features
+            #print(tmp[14])
             #y_tmp = [0] * 11
             y_tmp = [0] * 7
             tmp_last = tmp[-1]
@@ -102,13 +104,21 @@ def print_stats(y_predicted_lst, y_test_lst):
         #if(elem!=[1] + [0]*10 and elem!=[0] + [1] + [0]*9):
         #    print(elem)
     if i!=0:
-        print "The NN behavior must be dealt with. The NN should only turn on one output node on each output. Wrong output count: ", i
+        print "The NN behavior must be dealt with. The NN should turn on one output node on each output sequence. Non-descriptive output count: ", i
 
+# PARSE DATA AND GET TRAINING VALUES
 # input_lst = parse_pcapdataset("pcap/pcapdataset.txt")
 # testpcap_input = parse_pcapdataset("pcap/pcapdataset.txt")
 X_train, y_train = parse_csvdataset(sys.argv[1])
+#print("------")
+#print(len(X_train))
+#print(X_train)
 X_train = np.array(X_train, dtype='float64')
 y_train = np.array(y_train, dtype='float64')
+#print(X_train.tolist())
+# NORMALIZE TRAINING VALUES
+scaler = preprocessing.StandardScaler().fit(X_train)
+#X_train = scaler.transform(X_train)    # normalize
 
 # train_test_split is not working as expected
 # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
@@ -122,7 +132,7 @@ y_train = np.array(y_train, dtype='float64')
 #print(clf)
 
 # DEFINE MODEL
-clf = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(16), random_state=1) # adam porque o dataset tem milhares de exemplos
+clf = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(64), random_state=1) # adam porque o dataset tem milhares de exemplos
 #print(clf)
 
 # TRAIN MODEL
@@ -134,6 +144,7 @@ print("Predicting...\n")
 
 X_test, y_test = parse_csvdataset(sys.argv[2])
 X_test = np.array(X_test, dtype='float64')
+#X_test = scaler.transform(X_test)      # normalize testing values
 y_test = np.array(y_test, dtype='float64')
 y_predicted = clf.predict(X_test)
 #print(y_predicted)
