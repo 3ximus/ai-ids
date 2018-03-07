@@ -81,25 +81,18 @@ def print_stats(y_predicted_lst, y_test_lst):
     print("DoS-Slowhttptest: ", y_predicted_lst.count(DoS_Slowhttptest), "predicted out of", y_test_lst.count(DoS_Slowhttptest), "test values")
     print("Heartbleed: ", y_predicted_lst.count(Heartbleed), "predicted out of", y_test_lst.count(Heartbleed), "test values")
     '''
-    train_flows =  (("DoS-Attack": 294496, "PortScan" : 158930, "Bot" : 1966, "Infiltration" : 36, "FTP-Patator" : 7938, "SSH-Patator" : 5897, "Heartbleed" : 11}
-    attacks =  ((1, 0, 0, 0, 0, 0, 0),   # DoS_Attack
-                (0, 1, 0, 0, 0, 0, 0),   # PortScan
-                (0, 0, 1, 0, 0, 0, 0),   # Bot
-                (0, 0, 0, 1, 0, 0, 0),   # Infiltration
-                (0, 0, 0, 0, 1, 0, 0),   # FTP_Patator
-                (0, 0, 0, 0, 0, 1, 0),   # SSH_Patator
-                (0, 0, 0, 0, 0, 0, 1))   # Heartbleed
-    print("Flows")
+#                Type        Flow count         Network Output
+    attacks = (("DoS-Attack",    294496, [1, 0, 0, 0, 0, 0, 0]),
+               ("PortScan",      158930, [0, 1, 0, 0, 0, 0, 0]),
+               ("Bot",             1966, [0, 0, 1, 0, 0, 0, 0]),
+               ("Infiltration",      36, [0, 0, 0, 1, 0, 0, 0]),
+               ("FTP-Patator",     7938, [0, 0, 0, 0, 1, 0, 0]),
+               ("SSH-Patator",     5897, [0, 0, 0, 0, 0, 1, 0]),
+               ("Heartbleed",        11, [0, 0, 0, 0, 0, 0, 1]))
+    print("# Flows             Type  Predicted / TOTAL")
     for x in attacks:
-        print("% 7d" % )
-(
-    print("DoS-Attack (train:  flows): ", y_predicted_lst.count(DoS_Attack), "predicted out of", y_test_lst.count(DoS_Attack), "test values")
-    print(" (train:  flows): ", y_predicted_lst.count(PortScan), "predicted out of", y_test_lst.count(PortScan), "test values")
-    print(" (train:  flows): ", y_predicted_lst.count(Bot), "predicted out of", y_test_lst.count(Bot), "test values")
-    print(" (train:  flows): ", y_predicted_lst.count(Infiltration), "predicted out of", y_test_lst.count(Infiltration), "test values")
-    print(" (train:  flows): ", y_predicted_lst.count(FTP_Patator), "predicted out of", y_test_lst.count(FTP_Patator), "test values")
-    print(" (train:  flows): ", y_predicted_lst.count(SSH_Patator), "predicted out of", y_test_lst.count(SSH_Patator), "test values")
-    print(" (train:  flows): ", y_predicted_lst.count(Heartbleed), "predicted out of", y_test_lst.count(Heartbleed), "test values")
+        predict, total = y_predicted_lst.count(x[2]), y_test_lst.count(x[2])
+        print("\033[1;3%dm% 7d %16s     % 6d / %d\033[m" % (1 if predict > total else 2, x[1], x[0], predict, total))
 
     print("")
     i=0
