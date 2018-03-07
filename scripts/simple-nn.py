@@ -69,33 +69,37 @@ def print_stats(y_predicted_lst, y_test_lst):
     DoS_Slowhttptest = [0]*9 + [1] + [0]
     Heartbleed = [0]*10 + [1]
 
-    print("DDoS: ", str(y_predicted_lst.count(DDoS)), "predicted out of", str(y_test_lst.count(DDoS)), "test values")
-    print("PortScan: ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values")
-    print("Bot: ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values")
-    print("Infiltration: ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values")
-    print("FTP-Patator: ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
-    print("SSH-Patator: ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
-    print("DoS-Hulk: ", str(y_predicted_lst.count(DoS_Hulk)), "predicted out of", str(y_test_lst.count(DoS_Hulk)), "test values")
-    print("DoS-GoldenEye: ", str(y_predicted_lst.count(DoS_GoldenEye)), "predicted out of", str(y_test_lst.count(DoS_GoldenEye)), "test values")
-    print("DoS-slowloris: ", str(y_predicted_lst.count(DoS_slowloris)), "predicted out of", str(y_test_lst.count(DoS_slowloris)), "test values")
-    print("DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_test_lst.count(DoS_Slowhttptest)), "test values")
-    print("Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
+    print("DDoS: ", y_predicted_lst.count(DDoS), "predicted out of", y_test_lst.count(DDoS), "test values")
+    print("PortScan: ", y_predicted_lst.count(PortScan), "predicted out of", y_test_lst.count(PortScan), "test values")
+    print("Bot: ", y_predicted_lst.count(Bot), "predicted out of", y_test_lst.count(Bot), "test values")
+    print("Infiltration: ", y_predicted_lst.count(Infiltration), "predicted out of", y_test_lst.count(Infiltration), "test values")
+    print("FTP-Patator: ", y_predicted_lst.count(FTP_Patator), "predicted out of", y_test_lst.count(FTP_Patator), "test values")
+    print("SSH-Patator: ", y_predicted_lst.count(SSH_Patator), "predicted out of", y_test_lst.count(SSH_Patator), "test values")
+    print("DoS-Hulk: ", y_predicted_lst.count(DoS_Hulk), "predicted out of", y_test_lst.count(DoS_Hulk), "test values")
+    print("DoS-GoldenEye: ", y_predicted_lst.count(DoS_GoldenEye), "predicted out of", y_test_lst.count(DoS_GoldenEye), "test values")
+    print("DoS-slowloris: ", y_predicted_lst.count(DoS_slowloris), "predicted out of", y_test_lst.count(DoS_slowloris), "test values")
+    print("DoS-Slowhttptest: ", y_predicted_lst.count(DoS_Slowhttptest), "predicted out of", y_test_lst.count(DoS_Slowhttptest), "test values")
+    print("Heartbleed: ", y_predicted_lst.count(Heartbleed), "predicted out of", y_test_lst.count(Heartbleed), "test values")
     '''
-    DoS_Attack = [1] + [0]*6
-    PortScan = [0] + [1] + [0]*5
-    Bot = [0]*2 + [1] + [0]*4
-    Infiltration = [0]*3 + [1] + [0]*3
-    FTP_Patator = [0]*4 + [1] + [0]*2
-    SSH_Patator = [0]*5 + [1] + [0]
-    Heartbleed = [0]*6 + [1]
-
-    print("DoS-Attack (train: 294496 flows): ", str(y_predicted_lst.count(DoS_Attack)), "predicted out of", str(y_test_lst.count(DoS_Attack)), "test values")
-    print("PortScan (train: 158930 flows): ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values")
-    print("Bot (train: 1966 flows): ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values")
-    print("Infiltration (train: 36 flows): ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values")
-    print("FTP-Patator (train: 7938 flows): ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
-    print("SSH-Patator (train: 5897 flows): ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
-    print("Heartbleed (train: 11 flows): ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
+    train_flows =  (("DoS-Attack": 294496, "PortScan" : 158930, "Bot" : 1966, "Infiltration" : 36, "FTP-Patator" : 7938, "SSH-Patator" : 5897, "Heartbleed" : 11}
+    attacks =  ((1, 0, 0, 0, 0, 0, 0),   # DoS_Attack
+                (0, 1, 0, 0, 0, 0, 0),   # PortScan
+                (0, 0, 1, 0, 0, 0, 0),   # Bot
+                (0, 0, 0, 1, 0, 0, 0),   # Infiltration
+                (0, 0, 0, 0, 1, 0, 0),   # FTP_Patator
+                (0, 0, 0, 0, 0, 1, 0),   # SSH_Patator
+                (0, 0, 0, 0, 0, 0, 1))   # Heartbleed
+    print("Flows")
+    for x in attacks:
+        print("% 7d" % )
+(
+    print("DoS-Attack (train:  flows): ", y_predicted_lst.count(DoS_Attack), "predicted out of", y_test_lst.count(DoS_Attack), "test values")
+    print(" (train:  flows): ", y_predicted_lst.count(PortScan), "predicted out of", y_test_lst.count(PortScan), "test values")
+    print(" (train:  flows): ", y_predicted_lst.count(Bot), "predicted out of", y_test_lst.count(Bot), "test values")
+    print(" (train:  flows): ", y_predicted_lst.count(Infiltration), "predicted out of", y_test_lst.count(Infiltration), "test values")
+    print(" (train:  flows): ", y_predicted_lst.count(FTP_Patator), "predicted out of", y_test_lst.count(FTP_Patator), "test values")
+    print(" (train:  flows): ", y_predicted_lst.count(SSH_Patator), "predicted out of", y_test_lst.count(SSH_Patator), "test values")
+    print(" (train:  flows): ", y_predicted_lst.count(Heartbleed), "predicted out of", y_test_lst.count(Heartbleed), "test values")
 
     print("")
     i=0
@@ -158,8 +162,8 @@ y_predicted = clf.predict(X_test)
 #print("MLP Accuracy (Pickle): " + str(result))
 
 # PRINT RESULTS
-print("MLP Correctly Classified: " + str(accuracy_score(y_test, y_predicted,normalize=False)) + "/" + str(len(y_predicted)))
-print("MLP Accuracy (sklearn): " + str(accuracy_score(y_test, y_predicted,normalize=True)))
+print("MLP Correctly Classified:" , accuracy_score(y_test, y_predicted,normalize=False) , "/" , len(y_predicted))
+print("MLP Accuracy (sklearn):" , accuracy_score(y_test, y_predicted,normalize=True))
 
 # LOOK AT PREDICTED VALUES AND PRINT STATS
 print_stats(y_predicted.tolist(), y_test.tolist())

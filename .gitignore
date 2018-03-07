@@ -5,6 +5,7 @@
 csv/*
 pcap/*
 flows/*
+csv
 
 # virtual environment
 IDS/*
