@@ -1,6 +1,6 @@
 import os
 
-dirpath = "/root/Desktop/PCAP_SANDBOX/ai-ids/csv/selected-compacted-datasets/all_features/raw/individual/"
+dirpath = "/root/Desktop/PCAP_SANDBOX/ai-ids/csv/selected-compacted-datasets/21features/raw/individual/"
 dirlist = os.listdir(dirpath)
 for filename in dirlist:
 	absfilename = dirpath + filename

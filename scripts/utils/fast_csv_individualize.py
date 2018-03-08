@@ -8,15 +8,15 @@ op.add_argument('-d', '--default', action='store_true', help="default behavior",
 args = op.parse_args()
 
 if args.default:
-	f = open('csv/selected-compacted-datasets/all_features/raw/Malign-Dataset.csv', 'r')
-	defaults = {'DDoS':'csv/selected-compacted-datasets/all_features/raw/individual/DDoS.csv',
-	'DoS GoldenEye':'csv/selected-compacted-datasets/all_features/raw/individual/DoS-GoldenEye.csv',
-	'DoS Hulk':'csv/selected-compacted-datasets/all_features/raw/individual/DoS-Hulk.csv',
-	'DoS Slowhttptest':'csv/selected-compacted-datasets/all_features/raw/individual/DoS-Slowhttptest.csv',
-	'DoS slowloris':'csv/selected-compacted-datasets/all_features/raw/individual/DoS-slowloris.csv',
-	'FTP-Patator':'csv/selected-compacted-datasets/all_features/raw/individual/FTP-Patator.csv',
-	'PortScan':'csv/selected-compacted-datasets/all_features/raw/individual/PortScan.csv',
-	'SSH-Patator':'csv/selected-compacted-datasets/all_features/raw/individual/SSH-Patator.csv',
+	f = open('csv/selected-compacted-datasets/21features/raw/Malign-Dataset.csv', 'r')
+	defaults = {'DDoS':'csv/selected-compacted-datasets/21features/raw/individual/DDoS.csv',
+	'DoS GoldenEye':'csv/selected-compacted-datasets/21features/raw/individual/DoS-GoldenEye.csv',
+	'DoS Hulk':'csv/selected-compacted-datasets/21features/raw/individual/DoS-Hulk.csv',
+	'DoS Slowhttptest':'csv/selected-compacted-datasets/21features/raw/individual/DoS-Slowhttptest.csv',
+	'DoS slowloris':'csv/selected-compacted-datasets/21features/raw/individual/DoS-slowloris.csv',
+	'FTP-Patator':'csv/selected-compacted-datasets/21features/raw/individual/FTP-Patator.csv',
+	'PortScan':'csv/selected-compacted-datasets/21features/raw/individual/PortScan.csv',
+	'SSH-Patator':'csv/selected-compacted-datasets/21features/raw/individual/SSH-Patator.csv',
 	}
 	for key in defaults:
 		f.seek(0)

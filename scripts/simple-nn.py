@@ -40,14 +40,15 @@ def parse_csvdataset(filename):
     x_in = []
     y_in = []
     #outputs = {"DDoS": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "DoS Hulk": 6, "DoS GoldenEye": 7, "DoS slowloris": 8, "DoS Slowhttptest": 9, "Heartbleed": 10}
-    outputs = {"DoS-Attack": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "Heartbleed": 6}
+    #outputs = {"DoS-Attack": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "Heartbleed": 6}
+    outputs = {"DoS-Attack": 0, "PortScan": 1, "FTP-Patator": 2, "SSH-Patator": 3}
     with open(filename, 'r') as fd:
         for line in fd:
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])       # the 9 extracted features
-            y_tmp = [0] * 7
+            y_tmp = [0] * 4              # all the classes
             tmp_last = tmp[-1]
-            if tmp_last=="BENIGN": tmp[-1]="Heartbleed"      # testing purposes
+            #if tmp_last=="BENIGN": tmp[-1]="Heartbleed"      # testing purposes
             if tmp_last in ("DDoS","DoS Hulk","DoS GoldenEye","DoS slowloris","DoS Slowhttptest"): tmp[-1]="DoS-Attack"
             y_tmp[outputs[tmp[-1]]] = 1  # choose result based on label
             y_in.append(y_tmp)
@@ -79,6 +80,7 @@ def print_stats(y_predicted_lst, y_test_lst):
     print("DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_test_lst.count(DoS_Slowhttptest)), "test values")
     print("Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
     '''
+    '''
     DoS_Attack = [1] + [0]*6
     PortScan = [0] + [1] + [0]*5
     Bot = [0]*2 + [1] + [0]*4
@@ -94,7 +96,18 @@ def print_stats(y_predicted_lst, y_test_lst):
     print("FTP-Patator (train: 7938 flows):", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
     print("SSH-Patator (train: 5897 flows):", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
     print("Heartbleed (train: 11 flows):", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
-    
+    '''
+
+    DoS_Attack = [1] + [0]*3
+    PortScan = [0] + [1] + [0]*2
+    FTP_Patator = [0]*2 + [1] + [0]
+    SSH_Patator = [0]*3 + [1]
+
+    print("DoS-Attack (train: 2000 flows):", str(y_predicted_lst.count(DoS_Attack)), "predicted out of", str(y_test_lst.count(DoS_Attack)), "test values")
+    print("PortScan (train: 2000 flows):", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values")
+    print("FTP-Patator (train: 2000 flows):", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
+    print("SSH-Patator (train: 2000 flows):", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
+
     i=0
     for elem in y_predicted_lst:
         if(elem.count(1)!=1):
@@ -134,11 +147,11 @@ clf = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_lay
 #print(clf)
 
 # TRAIN MODEL
-print("Training...")
+print("Training... (" + sys.argv[1] + ")")
 clf.fit(X_train, y_train)
 
 # PREDICT VALUES BASED ON THE GIVEN INPUT
-print("Predicting...\n")
+print("Predicting... (" + sys.argv[2] + ")\n")
 
 X_test, y_test = parse_csvdataset(sys.argv[2])
 X_test = np.array(X_test, dtype='float64')
