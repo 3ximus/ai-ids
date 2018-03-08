@@ -5,7 +5,8 @@
 csv/*
 pcap/*
 flows/*
-
+dist/*
+scripts/utils/*.pyc
 # virtual environment
 IDS/*
 

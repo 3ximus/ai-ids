@@ -45,12 +45,10 @@ def parse_csvdataset(filename):
         for line in fd:
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])       # the 9 extracted features
-            #print(tmp[14])
-            #y_tmp = [0] * 11
             y_tmp = [0] * 7
             tmp_last = tmp[-1]
             if tmp_last=="BENIGN": tmp[-1]="Heartbleed"      # testing purposes
-            if tmp_last=="DDoS" or tmp_last=="DoS Hulk" or tmp_last=="DoS GoldenEye" or tmp_last=="DoS slowloris" or tmp_last=="DoS Slowhttptest": tmp[-1]="DoS-Attack"
+            if tmp_last in ("DDoS","DoS Hulk","DoS GoldenEye","DoS slowloris","DoS Slowhttptest"): tmp[-1]="DoS-Attack"
             y_tmp[outputs[tmp[-1]]] = 1  # choose result based on label
             y_in.append(y_tmp)
     return x_in, y_in
@@ -89,15 +87,14 @@ def print_stats(y_predicted_lst, y_test_lst):
     SSH_Patator = [0]*5 + [1] + [0]
     Heartbleed = [0]*6 + [1]
 
-    print("DoS-Attack (train: 294496 flows): ", str(y_predicted_lst.count(DoS_Attack)), "predicted out of", str(y_test_lst.count(DoS_Attack)), "test values")
-    print("PortScan (train: 158930 flows): ", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values")
-    print("Bot (train: 1966 flows): ", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values")
-    print("Infiltration (train: 36 flows): ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values")
-    print("FTP-Patator (train: 7938 flows): ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
-    print("SSH-Patator (train: 5897 flows): ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
-    print("Heartbleed (train: 11 flows): ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
-
-    print("")
+    print("DoS-Attack (train: 294496 flows):", str(y_predicted_lst.count(DoS_Attack)), "predicted out of", str(y_test_lst.count(DoS_Attack)), "test values")
+    print("PortScan (train: 158930 flows):", str(y_predicted_lst.count(PortScan)), "predicted out of", str(y_test_lst.count(PortScan)), "test values")
+    print("Bot (train: 1966 flows):", str(y_predicted_lst.count(Bot)), "predicted out of", str(y_test_lst.count(Bot)), "test values")
+    print("Infiltration (train: 36 flows):", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values")
+    print("FTP-Patator (train: 7938 flows):", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
+    print("SSH-Patator (train: 5897 flows):", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
+    print("Heartbleed (train: 11 flows):", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
+    
     i=0
     for elem in y_predicted_lst:
         if(elem.count(1)!=1):
@@ -105,7 +102,7 @@ def print_stats(y_predicted_lst, y_test_lst):
         #if(elem!=[1] + [0]*10 and elem!=[0] + [1] + [0]*9):
         #    print(elem)
     if i!=0:
-        print("The NN behavior must be dealt with. The NN should only turn on one output node on each output. Wrong output count: ", i)
+        print("Non-descriptive output count:", i,"test values")
 
 # PARSE DATA AND GET TRAINING VALUES
 # input_lst = parse_pcapdataset("pcap/pcapdataset.txt")
