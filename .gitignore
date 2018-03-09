@@ -3,6 +3,7 @@
 
 # link
 csv
+dist
 # data
 csv/*
 pcap/*
