@@ -10,7 +10,7 @@ pcap/*
 flows/*
 dist/*
 scripts/utils/*.pyc
-
+neurals/*
 # virtual environment
 IDS/*
 
