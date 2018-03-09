@@ -10,7 +10,7 @@ def write_to_file(of, line, title):
     for j,elem in enumerate(splitted):
         of.write(title[j].strip(' \n') + ": " + elem + "\n")
 
-op = argparse.ArgumentParser( description="Neural Network for poker card combinations")
+op = argparse.ArgumentParser( description="Remove unused labels from flows, and filter MALIGN / BENIGN flows")
 op.add_argument('files', metavar='file', nargs='*', help='')
 op.add_argument('-b', '--benign', action='store_true', help="print Only Benign flows", dest='benign')
 op.add_argument('-x', '--csv', action='store_true', help="print selected columns in csv format", dest='csv')
