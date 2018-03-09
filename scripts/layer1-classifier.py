@@ -9,7 +9,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn import preprocessing
 from sklearn.preprocessing import Normalizer
 
-#USAGE: simple-nn training_dataset.csv testing_dataset.csv
+#USAGE: layer1-classifier training_dataset.csv testing_dataset.csv
 
 # =====================
 #     CONFIGURATION
