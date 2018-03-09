@@ -8,11 +8,12 @@ cp ${directory}/raw/individual/*.csv ${directory}/distributed/benign-individual/
 for file in ${directory}/distributed/benign-individual/*.csv; do
 	filename=$(basename ${file})
 	name=${filename%.*}
-	if [[ name = *"dos"* ]]; then
-  		head -n $(wc -l < ${file}) ${directory}/raw/benign/Benign-Dataset.csv >> ${file}
-		mv ${file} ${directory}/distributed/benign-individual/benign-dos.csv
-	else
-		head -n $(wc -l < ${file}) ${directory}/raw/benign/Benign-Dataset.csv >> ${file}
-		mv ${file} ${directory}/distributed/benign-individual/benign-${name,,}.csv
-	fi
+	head -n $(wc -l < ${file}) ${directory}/raw/benign/Benign-Dataset.csv >> ${file}
+	mv ${file} ${directory}/distributed/benign-individual/benign-${name,,}.csv
+done
+
+#dos
+for file in ${directory}/distributed/benign-individual/benign-d*.csv; do
+	cat $file >> ${directory}/distributed/benign-individual/benign-dos-attack.csv
+	rm $file
 done
