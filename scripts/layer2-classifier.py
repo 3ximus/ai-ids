@@ -80,7 +80,7 @@ def print_stats(y_predicted, y_test, train_label_count=None):
     # for the metric below use 'micro' for the precision value: tp / (tp + fp) , it seems to be the same as accuracy_score...
     print("MLP Precision:", precision_score(y_test.argmax(1), y_predicted.argmax(1), average='macro'),'\n') # Calculate metrics for each label, and find their unweighted mean. This does not take label imbalance into account.
     print("# Flows             Type  Predicted / TOTAL")
-    if train_label_count==None: train_label_count = [8000, 8000]
+    if train_label_count==None: train_label_count = [8000]*LABELS
     CLASSIFICATION_KEYS = CLASSIFICATIONS.keys()
     y_predicted_lst = y_predicted.tolist()
     y_test_lst = y_test.tolist()
