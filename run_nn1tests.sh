@@ -1,8 +1,9 @@
 #!/bin/bash
 set -e
 # arg1: abspath to pcap file, arg2: label, arg3: how many features or 'all'
-
-if [ -z "$2" ] ; then
+if [ -z "$1" ] ; then
+	echo "Pcap test-file missing" 1>&2 && exit 1
+elif [ -z "$2" ] ; then
 	echo "Label missing" 1>&2  && exit 1
 elif [ -z "$3" ] ; then
 	echo "Number of features missing" 1>&2 && exit 1
