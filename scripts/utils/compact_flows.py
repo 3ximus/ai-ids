@@ -25,10 +25,10 @@ if not args.features: args.features = 64 # give a default value of all features
 # list of files containing the features
 features_files = glob.glob(path.dirname(sys.argv[0])+'/features/*.txt')
 # count of #features in each feature file
-features_count = [sum([1 for l in fd if l not in ('\n','',' ')])-1 for fd in [open(x,'r') for x in features_files]]
+features_count = [sum([1 for l in fd if l not in ('\n','',' ')])-1 for fd in (open(x,'r') for x in features_files)]
 # list of features in each file
-features_list = [f.read().splitlines() for f in [open(x,'r') for x in features_files]]
-FEATURES = dict(zip(features_count, features_list))
+features_list = [f.read().splitlines() for f in (open(x,'r') for x in features_files)]
+FEATURES = dict(zip(features_count, features_list)) # zip everything into a dictionary
 KNOWN_LABELS = ("portscan", "ftp.?patator", "ssh.?patator", "bot", "infiltration", "heartbleed", "dos.?hulk", "dos.?goldeneye", "dos.?slowloris", "dos.?slowhttptest", "ddos")
 
 if path.isdir(args.files[-1]): # directory output, process files separately
@@ -46,9 +46,9 @@ for i, in_file in enumerate(args.files[:-1]):
             break
     if not new_label: # ask user for new label
         new_label = input('Unable to choose label for %s, give me one > ' % in_file)
-    total_chunks = int(sum(1 for row in open(in_file,'r')) / CHUNKSIZE)
+    total_chunks = sum(1 for row in open(in_file,'r')) / CHUNKSIZE
     for c, chunk in enumerate(pandas.read_csv(in_file,chunksize=CHUNKSIZE)):
-        progress_bar(c / total_chunks * 100, initial_text=in_file+' ', bar_body="\033[34m-\033[m", bar_empty=" ", bar_arrow="\033[34m>\033[m")
+        progress_bar((c+1) / total_chunks * 100, initial_text=in_file+' ', bar_body="\033[34m-\033[m", bar_arrow="\033[34m>\033[m", align_right=True)
         chunk['Label'] = new_label # assign new label
         df = chunk[(chunk["Label"] != "BENIGN")] if not args.benign else chunk[(chunk["Label"] == "BENIGN")]
         df = df[df["Flow Byts/s"].notnull()]

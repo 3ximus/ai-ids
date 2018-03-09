@@ -5,13 +5,14 @@
 from __future__ import print_function
 import sys
 
-def progress_bar(percent_complete, show_percentage=False, bar_body = ".", bar_empty = " ", bar_begin = "[", bar_end = "]", bar_size=20, bar_arrow=None, initial_text = '', ending_text = '\n'):
+def progress_bar(percent_complete, show_percentage=False, align_right=False, bar_body = ".", bar_empty = " ", bar_begin = "[", bar_end = "]", bar_size=20, bar_arrow=None, initial_text = '', ending_text = '\n'):
 	''' Function returns 1 on completion
 
 		Parameters
 		----------
 		percent_complete:   integer value
 		show_percentage:    boolean to show percentage value after the bar
+		align_right:        align percentage bar to the right
 		bar_body:           character element of the filled bar
 		bar_empty:          character element of the empty bar
 		bar_begin:          left delimiter of the bar
@@ -34,14 +35,18 @@ def progress_bar(percent_complete, show_percentage=False, bar_body = ".", bar_em
 	# Clamp percenteage between 0-100
 	percent_complete = 0 if percent_complete < 0 else (100 if percent_complete > 100 else percent_complete)
 
+
 	# Bar has a body with a maximum of bar_size spaces
 	dots_to_print = int(bar_size/100.0 * percent_complete)
 	empty_spaces = int(bar_size - dots_to_print) - 1 if bar_arrow != "" else int(bar_size - dots_to_print)
 	bar = bar_begin + bar_body * dots_to_print + (bar_arrow if bar_arrow and percent_complete != 100 else "") + bar_empty * empty_spaces + bar_end
+	# spacing to align right
+	if align_right:
+		spacing = '\033[?7l'+' '*400+'\033[?7h\033['+ str(bar_size + (9 if show_percentage else 1))+'D'
 
 # PRINT VERSION
-	if not show_percentage: print("\r" + initial_text + bar, end='')
-	else: print("\r" + initial_text + bar + "  %.0f %%  " % percent_complete, end='')
+	if not show_percentage: print("\r" + initial_text + (spacing if align_right else '') + bar, end='')
+	else: print("\r" + initial_text + (spacing if align_right else '') + bar + "% 5d %%  " % percent_complete, end='')
 	sys.stdout.flush()
 	if percent_complete == 100:
 		print(ending_text, end='')
