@@ -11,15 +11,27 @@ from sklearn.preprocessing import Normalizer
 
 #USAGE: simple-nn training_dataset.csv testing_dataset.csv
 
-param_grid = [
-    {
-        'activation' : ['identity', 'logistic', 'tanh', 'relu'],
-        'solver' : ['lbfgs', 'sgd', 'adam'],
-        'hidden_layer_sizes': [
-        (1,),(2,),(3,),(4,),(5,),(6,),(7,),(8,),(9,),(10,),(11,), (12,),(13,),(14,),(15,),(16,),(17,),(18,),(19,),(20,),(21,)
-        ]
-    }
-]
+# =====================
+#     CONFIGURATION
+# =====================
+
+LABELS = 4
+# Attack Mapping for output encoding, DoS-Attack is used when refering to all DoS type attacks. DDoS value is 0 for easier output
+ATTACK_KEYS = ["DoS-Attack", "PortScan", "FTP-Patator", "SSH-Patator", "Bot", "Infiltration", "Heartbleed", "DDoS", "DoS Hulk", "DoS GoldenEye", "DoS slowloris", "DoS Slowhttptest"]
+ATTACK_INDEX = [0, 1, 2, 3, 4, 5, 6, 0, 7, 8, 9, 10]
+ATTACKS = dict(zip(ATTACK_KEYS, ATTACK_INDEX[:8] + (ATTACK_INDEX[-4:] if LABELS > 7 else [0] * 4)))
+OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
+
+PARAM_GRID = [{
+    'activation' : ['identity', 'logistic', 'tanh', 'relu'],
+    'solver' : ['lbfgs', 'sgd', 'adam'],
+    'hidden_layer_sizes': [
+    (1,),(2,),(3,),(4,),(5,),(6,),(7,),(8,),(9,),(10,),(11,),(12,),(13,),(14,),(15,),(16,),(17,),(18,),(19,),(20,),(21,)]}]
+
+
+# =====================
+#      FUNCTIONS
+# =====================
 
 def save_model(filename, clfmodel):
     # save the model to disk
@@ -39,22 +51,22 @@ def load_model(filename):
 def parse_csvdataset(filename):
     x_in = []
     y_in = []
-    #outputs = {"DDoS": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "DoS Hulk": 6, "DoS GoldenEye": 7, "DoS slowloris": 8, "DoS Slowhttptest": 9, "Heartbleed": 10}
-    #outputs = {"DoS-Attack": 0, "PortScan": 1, "Bot": 2, "Infiltration": 3, "FTP-Patator": 4, "SSH-Patator": 5, "Heartbleed": 6}
-    outputs = {"DoS-Attack": 0, "PortScan": 1, "FTP-Patator": 2, "SSH-Patator": 3}
     with open(filename, 'r') as fd:
         for line in fd:
             tmp = line.strip('\n').split(',')
-            x_in.append(tmp[1:-1])       # the 9 extracted features
-            y_tmp = [0] * 4              # all the classes
-            tmp_last = tmp[-1]
-            #if tmp_last=="BENIGN": tmp[-1]="Heartbleed"      # testing purposes
-            if tmp_last in ("DDoS","DoS Hulk","DoS GoldenEye","DoS slowloris","DoS Slowhttptest"): tmp[-1]="DoS-Attack"
-            y_tmp[outputs[tmp[-1]]] = 1  # choose result based on label
-            y_in.append(y_tmp)
+            x_in.append(tmp[1:-1])
+            y_tmp = [0] * LABELS
+            try:
+                y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
+            except IndexError:
+                print("ERROR: Dataset \"%s\" contains more labels than the ones allowed." % filename, file=sys.stderr)
+                sys.exit(1)
+            except KeyError:
+                print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]), file=sys.stderr)
+                sys.exit(1)
     return x_in, y_in
 
-def print_stats(y_predicted_lst, y_test_lst):
+def print_stats(y_predicted_lst, y_test_lst, train_label_count):
     '''
     DDoS = [1] + [0]*10
     PortScan = [0] + [1] + [0]*9
@@ -74,10 +86,6 @@ def print_stats(y_predicted_lst, y_test_lst):
     print("Infiltration: ", str(y_predicted_lst.count(Infiltration)), "predicted out of", str(y_test_lst.count(Infiltration)), "test values")
     print("FTP-Patator: ", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
     print("SSH-Patator: ", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
-    print("DoS-Hulk: ", str(y_predicted_lst.count(DoS_Hulk)), "predicted out of", str(y_test_lst.count(DoS_Hulk)), "test values")
-    print("DoS-GoldenEye: ", str(y_predicted_lst.count(DoS_GoldenEye)), "predicted out of", str(y_test_lst.count(DoS_GoldenEye)), "test values")
-    print("DoS-slowloris: ", str(y_predicted_lst.count(DoS_slowloris)), "predicted out of", str(y_test_lst.count(DoS_slowloris)), "test values")
-    print("DoS-Slowhttptest: ", str(y_predicted_lst.count(DoS_Slowhttptest)), "predicted out of", str(y_test_lst.count(DoS_Slowhttptest)), "test values")
     print("Heartbleed: ", str(y_predicted_lst.count(Heartbleed)), "predicted out of", str(y_test_lst.count(Heartbleed)), "test values")
     '''
     '''
@@ -108,28 +116,29 @@ def print_stats(y_predicted_lst, y_test_lst):
     print("FTP-Patator (train: 2000 flows):", str(y_predicted_lst.count(FTP_Patator)), "predicted out of", str(y_test_lst.count(FTP_Patator)), "test values")
     print("SSH-Patator (train: 2000 flows):", str(y_predicted_lst.count(SSH_Patator)), "predicted out of", str(y_test_lst.count(SSH_Patator)), "test values")
 
-    i=0
-    for elem in y_predicted_lst:
-        if(elem.count(1)!=1):
-            i+=1
-        #if(elem!=[1] + [0]*10 and elem!=[0] + [1] + [0]*9):
-        #    print(elem)
-    if i!=0:
-        print("Non-descriptive output count:", i,"test values")
+
+    print("# Flows             Type  Predicted / TOTAL")
+    for i in range(LABELS):
+        predict, total = y_predicted_lst.count(OUTPUTS[i]), y_test_lst.count(OUTPUTS[i])
+        print("\033[1;3%dm% 7d %16s     % 6d / %d\033[m" % (1 if predict > total else 2, train_label_count[i], ATTACK_KEYS[i], predict, total))
+
+    non_desc = sum((1 for elem in y_predicted_lst if elem.count(1) != 1))
+    if non_desc: print("Non-descriptive output count:", non_desc,"test values")
 
 # PARSE DATA AND GET TRAINING VALUES
-# input_lst = parse_pcapdataset("pcap/pcapdataset.txt")
-# testpcap_input = parse_pcapdataset("pcap/pcapdataset.txt")
+print('Reading Training Dataset...')
 X_train, y_train = parse_csvdataset(sys.argv[1])
-#print("------")
-#print(len(X_train))
-#print(X_train)
+train_label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
 X_train = np.array(X_train, dtype='float64')
 y_train = np.array(y_train, dtype='float64')
-#print(X_train.tolist())
-# NORMALIZE TRAINING VALUES
 scaler = preprocessing.StandardScaler().fit(X_train)
 #X_train = scaler.transform(X_train)    # normalize
+
+print('Reading Test Dataset...')
+X_test, y_test = parse_csvdataset(sys.argv[2])
+X_test = np.array(X_test, dtype='float64')
+#X_test = scaler.transform(X_test)      # normalize
+y_test = np.array(y_test, dtype='float64')
 
 # train_test_split is not working as expected
 # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
@@ -137,14 +146,13 @@ scaler = preprocessing.StandardScaler().fit(X_train)
 # FIND THE BEST PARAMETERS BASED ON TRAINING INPUT USING A GRID_SEARCH
 #MultilayerPerceptron = MLPClassifier()
 #print("Searching Grid")
-#clf = GridSearchCV(MultilayerPerceptron, param_grid, cv=3, scoring='accuracy')
+#clf = GridSearchCV(MultilayerPerceptron, PARAM_GRID, cv=3, scoring='accuracy')
 
 #print("Best parameters set found on development set:")
 #print(clf)
 
 # DEFINE MODEL
 clf = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(64), random_state=1) # adam porque o dataset tem milhares de exemplos
-#print(clf)
 
 # TRAIN MODEL
 print("Training... (" + sys.argv[1] + ")")
@@ -152,13 +160,7 @@ clf.fit(X_train, y_train)
 
 # PREDICT VALUES BASED ON THE GIVEN INPUT
 print("Predicting... (" + sys.argv[2] + ")\n")
-
-X_test, y_test = parse_csvdataset(sys.argv[2])
-X_test = np.array(X_test, dtype='float64')
-#X_test = scaler.transform(X_test)      # normalize testing values
-y_test = np.array(y_test, dtype='float64')
 y_predicted = clf.predict(X_test)
-#print(y_predicted)
 
 # SAVE MODEL, LOAD MODEL
 #save_model('clf.sav', clf)
@@ -172,4 +174,4 @@ print("MLP Correctly Classified: " + str(accuracy_score(y_test, y_predicted,norm
 print("MLP Accuracy (sklearn): " + str(accuracy_score(y_test, y_predicted,normalize=True)))
 
 # LOOK AT PREDICTED VALUES AND PRINT STATS
-print_stats(y_predicted.tolist(), y_test.tolist())
+print_stats(y_predicted.tolist(), y_test.tolist(), train_label_count)
