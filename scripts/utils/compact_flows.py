@@ -1,72 +1,59 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import sys, argparse, pandas
+from os import path
 import numpy as np
 from loading import progress_bar
+import re
 
-def write_to_file(of, line, title):
-    of.write("-------------- Flow " + str(i+1) + " --------------\n")
-    splitted = line.split(',')
-    for j,elem in enumerate(splitted):
-        of.write(title[j].strip(' \n') + ": " + elem + "\n")
-
-op = argparse.ArgumentParser( description="Remove unused labels from flows, and filter MALIGN / BENIGN flows")
-op.add_argument('files', metavar='file', nargs='*', help='')
-op.add_argument('-b', '--benign', action='store_true', help="print Only Benign flows", dest='benign')
-op.add_argument('-x', '--csv', action='store_true', help="print selected columns in csv format", dest='csv')
-op.add_argument('-f9', '--features9', action='store_true', help="9 feats", dest='f9')
-op.add_argument('-f21', '--features21', action='store_true', help="21 feats", dest='f21')
-op.add_argument('-fall', '--featuresall', action='store_true', help="all feats", dest='fall')
+op = argparse.ArgumentParser( description="Select features or filter MALIGN / BENIGN flows")
+op.add_argument('files', metavar='file', nargs='*', help='list of input files and output [last file is the output, if this file is a directory all files are processed separately into their respective output files]')
+op.add_argument('-b', '--benign', action='store_true', help="print only benign flows", dest='benign')
+op.add_argument('-r', '--replace-label', action='store_true', help="replace labels, if a known label is found its done automaticaly otherwise the user is prompted to choose a label", dest='rlabel')
+op.add_argument('-f9', '--features9', action='store_const', help="9 features", dest='features', const=9)
+op.add_argument('-f21', '--features21', action='store_const', help="21 features", dest='features', const=21)
+op.add_argument('-fall', '--featuresall', action='store_const', help="all features", dest='features', const=65)
 args = op.parse_args()
-chunksize = 10 ** 4
 
-#USAGE: python compact_flows.py ../csv/datasets/*.csv ../csv/other-datasets/compacted.csv
-of = open(args.files[-1], 'w')
-for in_file in args.files[:-1]:
-    print("FILE:", in_file)
-    if args.csv:
-        for chunk in pandas.read_csv(in_file,chunksize=chunksize):          # process dataframes chunk by chunk for memory optimization because my pc is great
-            df = chunk[(chunk["Label"] != "BENIGN")] if not args.benign else chunk[(chunk["Label"] == "BENIGN")]
-            df = df[df["Flow Byts/s"].notnull()]
-            df = df[df["Flow Pkts/s"].notnull()]
-            # 9 features
-            if args.f9:
-                df[["Flow Duration", "Tot Fwd Pkts", "Tot Bwd Pkts", "TotLen Fwd Pkts", "TotLen Bwd Pkts", "Fwd Pkts/s", "Bwd Pkts/s", "Fwd IAT Mean", "Bwd IAT Mean", "Label"]].to_csv(args.files[-1], mode='a', header=False)
-            # more features
-            elif args.f21:
-                df[["Flow Duration", "Tot Fwd Pkts", "Tot Bwd Pkts", "TotLen Fwd Pkts", "TotLen Bwd Pkts", "Fwd Pkts/s", "Bwd Pkts/s", "Fwd IAT Mean", "Bwd IAT Mean", "Pkt Len Min", "Pkt Len Max", "Pkt Len Mean", "Pkt Len Std", "Pkt Len Var", "Pkt Size Avg", "Fwd Seg Size Avg", "Bwd Seg Size Avg", "Subflow Fwd Pkts", "Subflow Fwd Byts", "Subflow Bwd Pkts", "Subflow Bwd Byts", "Label"]].to_csv(args.files[-1], mode='a', header=False)
-            # all usable features
-            elif args.fall:
-                df[["Flow Duration","Tot Fwd Pkts","Tot Bwd Pkts","TotLen Fwd Pkts","TotLen Bwd Pkts","Fwd Pkt Len Max","Fwd Pkt Len Min","Fwd Pkt Len Mean","Fwd Pkt Len Std","Bwd Pkt Len Max","Bwd Pkt Len Min","Bwd Pkt Len Mean","Bwd Pkt Len Std","Flow Byts/s","Flow Pkts/s","Flow IAT Mean","Flow IAT Std","Flow IAT Max","Flow IAT Min","Fwd IAT Tot","Fwd IAT Mean","Fwd IAT Std","Fwd IAT Max","Fwd IAT Min","Bwd IAT Tot","Bwd IAT Mean","Bwd IAT Std","Bwd IAT Max","Bwd IAT Min","Fwd Header Len","Bwd Header Len","Fwd Pkts/s","Bwd Pkts/s","Pkt Len Min","Pkt Len Max","Pkt Len Mean","Pkt Len Std","Pkt Len Var","Down/Up Ratio","Pkt Size Avg","Fwd Seg Size Avg","Bwd Seg Size Avg","Fwd Byts/b Avg","Fwd Pkts/b Avg","Fwd Blk Rate Avg","Bwd Byts/b Avg","Bwd Pkts/b Avg","Bwd Blk Rate Avg","Subflow Fwd Pkts","Subflow Fwd Byts","Subflow Bwd Pkts","Subflow Bwd Byts","Init Fwd Win Byts","Init Bwd Win Byts","Fwd Act Data Pkts","Fwd Seg Size Min","Active Mean","Active Std","Active Max","Active Min","Idle Mean","Idle Std","Idle Max","Idle Min","Label"]].to_csv(args.files[-1], mode='a', header=False)
-            # Removed:
-            # Flow ID,Src IP,Src Port,Dst IP,Dst Port,Protocol,Timestamp,Fwd PSH Flags,Bwd PSH Flags,Fwd URG Flags,Bwd URG Flags,FIN Flag Cnt,SYN Flag Cnt,RST Flag Cnt,PSH Flag Cnt,ACK Flag Cnt,URG Flag Cnt,CWE Flag Count,ECE Flag Cnt
-    else:
-        fd = open(in_file, 'r')
-        ln = sum(1 for x in fd)
-        fd.seek(0)
-        title = fd.readline().split(',')
-        of = open(args.files[-1], 'w')
-        for i,line in enumerate(fd):
-            progress_bar(i / (ln-2)*100, initial_text="Spitting: ", bar_body="\033[34m-\033[m", bar_empty=" ", bar_arrow="\033[34m>\033[m", show_percentage=True)
-            if not args.benign and "BENIGN" not in line:
-                write_to_file(of, line, title)
-            elif args.benign and "BENIGN" in line:
-                write_to_file(of, line, title)
-        fd.close()
+CHUNKSIZE = 10 ** 4
 
-if args.csv:
-    of.close()
-    of = open(args.files[-1], 'r')
-    noinf_str = ""
-    for line in of:
-        if line.find("Infinity")==-1:
-            noinf_str+=line
-    of.close()
-    of = open(args.files[-1],'w')
-    of.write(noinf_str)
+# READ FEATURES
 
-of.close()
-# NOTA: nao funciona diretamente com os .csv disponibilizados, so pelos criados pelo CICFlowMeter. 
+features_list = [f.read().splitlines() for f in [open(x,'r') for x in ['features/9.txt', 'features/21.txt', 'features/all.txt']]]
+FEATURES = dict(zip((9,21,65), features_list)
+KNOWN_LABELS = ["portscan", "ftp.?patator", "ssh.?patator", "bot", "infiltration", "heartbleed", "dos.?hulk", "dos.?goldeneye", "dos.?slowloris", "dos.?slowhttptest", "ddos"]
+
+out_file = args.files[-1]
+if path.isdir(out_file): # directory output, process files separately
+    of_names = [path.splitext(path.basename(in_file))[0] + '.test' for in_file in args.files[:-1]]
+else: # file is a regular file, process all inputs into this file
+    of_names = [out_file,]
+
+n_inputs = len(args.files[:-1])
+of_descriptors = [open(of, 'w') for of in of_names]
+print("Processing...")
+for i, in_file in enumerate(args.files[:-1]):
+    progress_bar(i / n_inputs * 100, initial_text=in_file, bar_body="\033[34m-\033[m", bar_empty=" ", bar_arrow="\033[34m>\033[m")
+# process dataframes chunk by chunk for memory optimization because my pc is great
+    for chunk in pandas.read_csv(in_file,chunksize=CHUNKSIZE):
+        if args.rlabel:
+            # TODO REPLACE LABEL
+        df = chunk[(chunk["Label"] != "BENIGN")] if not args.benign else chunk[(chunk["Label"] == "BENIGN")]
+        df = df[df["Flow Byts/s"].notnull()]
+        df = df[df["Flow Pkts/s"].notnull()]
+        df[args.features].to_csv(of_names[i%len(of_names)], mode='a', header=False)
+    for of in of_descriptors: of.close() # close all the files
+
+print("Filtering...")
+of_descriptors = [(open(of, 'r'), open(of, 'w')) for of in of_names] # open files for Infinity filtering
+for i, ofrw in enumerate(of_descriptors):
+    ofrw[1].write(''.join([line for line in ofrw[0] if 'Infinity' not in line])) # filter Infinity lines
+for ofrw in of_descriptors: # close files
+    ofrw[0].close() # close readable
+    ofrw[1].close() # close writable
+
+
+# NOTA: nao funciona diretamente com os .csv disponibilizados, so pelos criados pelo CICFlowMeter.
 # Para funcionar com os .csv criados por eles tem que se editar os titulos dos .csv para corresponderem
 # aos criados pelo programa, ou seja, com abreviaturas, sem espacos e sem a coluna ' Fwd Header Length'
 
