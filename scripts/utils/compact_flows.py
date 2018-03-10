@@ -12,6 +12,7 @@ except NameError:
 
 op = argparse.ArgumentParser( description="Select features or filter MALIGN / BENIGN flows")
 op.add_argument('files', metavar='file', nargs='*', help='list of input files and output [last file is the output, if this file is a directory all files are processed separately into their respective output files]')
+op.add_argument('-m', '--manual-label', action='store_true', help="always manually label data", dest='manual_label')
 op.add_argument('-b', '--benign', action='store_true', help="print only benign flows", dest='benign')
 op.add_argument('-f9', '--features9', action='store_const', help="9 features", dest='features', const=9)
 op.add_argument('-f21', '--features21', action='store_const', help="21 features", dest='features', const=21)
@@ -39,22 +40,21 @@ else: # file is a regular file, process all inputs into this file
 of_descriptors = [open(of, 'w') for of in of_names]
 print("Processing...")
 for i, in_file in enumerate(args.files[:-1]):
-    new_label = None
+    nlabel = None
     for k in KNOWN_LABELS: # regex
         if re.search(k, in_file, re.I):
-            new_label = KNOWN_LABELS[k]
+            nlabel = KNOWN_LABELS[k]
             break
-    if not new_label: # ask user for new label
-        new_label = input('Unable to choose label for %s, give me one > ' % in_file)
+    if args.manual_label or not nlabel: # ask user for new label
+        nlabel = input('Choose label for %s %s > ' % (in_file, '[PRESS ENTER: %s]' % nlabel if nlabel else '')) or nlabel
     total_chunks = sum(1 for row in open(in_file,'r')) / CHUNKSIZE
     for c, chunk in enumerate(pandas.read_csv(in_file,chunksize=CHUNKSIZE)):
         progress_bar((c+1) / total_chunks * 100, initial_text=in_file+' ', bar_body="\033[34m-\033[m", bar_arrow="\033[34m>\033[m", align_right=True)
-        chunk['Label'] = new_label # assign new label
+        chunk['Label'] = nlabel # assign new label
         df = chunk[(chunk["Label"] != "BENIGN")] if not args.benign else chunk[(chunk["Label"] == "BENIGN")]
         df = df[df["Flow Byts/s"].notnull()]
         df = df[df["Flow Pkts/s"].notnull()]
-        try:
-            df[FEATURES[args.features]].to_csv(of_names[i%len(of_names)], mode='a', header=False)
+        try: df[FEATURES[args.features]].to_csv(of_names[i%len(of_names)], mode='a', header=False)
         except:
             print('Number of features is not correct according to the flag given (%d), please fix this.' % args.features, file=sys.stderr)
             sys.exit(1)
