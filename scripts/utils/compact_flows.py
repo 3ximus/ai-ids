@@ -29,7 +29,7 @@ features_count = [sum([1 for l in fd if l not in ('\n','',' ')])-1 for fd in (op
 # list of features in each file
 features_list = [f.read().splitlines() for f in (open(x,'r') for x in features_files)]
 FEATURES = dict(zip(features_count, features_list)) # zip everything into a dictionary
-KNOWN_LABELS = ("portscan", "ftp.?patator", "ssh.?patator", "bot", "infiltration", "heartbleed", "dos.?hulk", "dos.?goldeneye", "dos.?slowloris", "dos.?slowhttptest", "ddos")
+KNOWN_LABELS = {"portscan": "PortScan", "ftp.?patator": "FTP-Patator", "ssh.?patator": "SSH-Patator", "bot": "Bot", "infiltration": "Infiltration", "heartbleed": "Heartbleed", "dos.?hulk": "DoS Hulk", "dos.?goldeneye": "DoS GoldenEye", "dos.?slowloris": "DoS slowloris", "dos.?slowhttptest": "DoS Slowhttptest", "ddos": "DDoS"}
 
 if path.isdir(args.files[-1]): # directory output, process files separately
     of_names = [args.files[-1] + '/' + path.splitext(path.basename(in_file))[0] + '.test' for in_file in args.files[:-1]]
@@ -40,9 +40,9 @@ of_descriptors = [open(of, 'w') for of in of_names]
 print("Processing...")
 for i, in_file in enumerate(args.files[:-1]):
     new_label = None
-    for k in KNOWN_LABELS:
+    for k in KNOWN_LABELS: # regex
         if re.search(k, in_file, re.I):
-            new_label = k
+            new_label = KNOWN_LABELS[k]
             break
     if not new_label: # ask user for new label
         new_label = input('Unable to choose label for %s, give me one > ' % in_file)
@@ -53,21 +53,21 @@ for i, in_file in enumerate(args.files[:-1]):
         df = chunk[(chunk["Label"] != "BENIGN")] if not args.benign else chunk[(chunk["Label"] == "BENIGN")]
         df = df[df["Flow Byts/s"].notnull()]
         df = df[df["Flow Pkts/s"].notnull()]
-        df[FEATURES[args.features]].to_csv(of_names[i%len(of_names)], mode='a', header=False)
+        try:
+            df[FEATURES[args.features]].to_csv(of_names[i%len(of_names)], mode='a', header=False)
+        except:
+            print('Number of features is not correct according to the flag given (%d), please fix this.' % args.features, file=sys.stderr)
+            sys.exit(1)
     for of in of_descriptors: of.close() # close all the files
 
-# print("Filtering...")
-# of_descriptors = [(open(of, 'r'), open(of, 'w')) for of in of_names] # open files for Infinity filtering
-# for i, ofrw in enumerate(of_descriptors):
-#     ofrw[1].write(''.join([line for line in ofrw[0] if 'Infinity' not in line])) # filter Infinity lines
-# for ofrw in of_descriptors: # close files
-#     ofrw[0].close() # close readable
-#     ofrw[1].close() # close writable
-
-
-# NOTA: nao funciona diretamente com os .csv disponibilizados, so pelos criados pelo CICFlowMeter.
-# Para funcionar com os .csv criados por eles tem que se editar os titulos dos .csv para corresponderem
-# aos criados pelo programa, ou seja, com abreviaturas, sem espacos e sem a coluna ' Fwd Header Length'
+print("Filtering...")
+read_f, write_f =  (open(of, 'r') for of in of_names), (open(of, 'w') for of in of_names) # open files for reading
+for i, ofr in enumerate(read_f):
+    write_me = ''.join([line for line in ofr if 'Infinity' not in line])
+    ofr.close() # close read
+    ofw = next(write_f)
+    ofw.write(write_me)
+    ofw.close() # close 
 
 # DATASETS DISPONIBILIZADOS: 84 features + 1 feature (no caso do DDoS, 'External IP')
 # DATASETS A SER CRIADOS: 83 features, nao incluem em caso algum o atributo 'External IP'
