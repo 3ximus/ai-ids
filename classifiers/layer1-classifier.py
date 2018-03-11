@@ -88,7 +88,7 @@ if __name__ == '__main__':
         neural_network1 = load_model(args.load.pop())
     else:
         label_count, neural_network1 = train_new_network(args.files[0])
-        save_model('neurals/neural_network1.sav', neural_network1)
+        save_model('saved_neural_networks/layer1.sav', neural_network1)
 
     y_test, y_predicted = predict(neural_network1, args.files[-1])
 

@@ -24,15 +24,15 @@ def load_model(filename):
 
 def print_stats(y_predicted, y_test, labels, outputs, get_class_name, label_count=None):
     '''Print MLP Statistics on a test dataset
-    
-		Parameters
-		----------
-		- y_predicted     numpy list of predict NN outputs
-		- y_test          numpy list of target outputs
+
+        Parameters
+        ----------
+        - y_predicted     numpy list of predict NN outputs
+        - y_test          numpy list of target outputs
         - labels          number of labels
         - outputs         categorical ouput classes (binary class array)
-		- get_class_name  function that given the output index returns the output label class name
-		- label_count     count of train data for each label
+        - get_class_name  function that given the output index returns the output label class name
+        - label_count     count of train data for each label
     '''
 
     print("MLP Correctly Classified:", accuracy_score(y_test, y_predicted, normalize=False) , "/" , len(y_predicted))
