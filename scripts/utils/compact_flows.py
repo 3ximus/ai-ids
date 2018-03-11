@@ -10,10 +10,10 @@ try: # beacause python 2 -.-
 except NameError:
    pass
 
-op = argparse.ArgumentParser( description="Select features or filter MALIGN / BENIGN flows")
-op.add_argument('files', metavar='file', nargs='*', help='list of input files and output [last file is the output, if this file is a directory all files are processed separately into their respective output files]')
+op = argparse.ArgumentParser(description="Select features, filter and label flows.")
+op.add_argument('files', metavar='file', nargs='+', help='list of input files and output [last file is the output, if this file is a directory all files are processed separately into their respective output files]')
 op.add_argument('-m', '--manual-label', action='store_true', help="always manually label data", dest='manual_label')
-op.add_argument('-b', '--benign', action='store_true', help="print only benign flows", dest='benign')
+op.add_argument('-b', '--benign', action='store_true', help="write only benign flows, in absence of this flag writes only non benign flows", dest='benign')
 op.add_argument('-f9', '--features9', action='store_const', help="9 features", dest='features', const=9)
 op.add_argument('-f21', '--features21', action='store_const', help="21 features", dest='features', const=21)
 op.add_argument('-fall', '--featuresall', action='store_const', help="all features (64)", dest='features', const=64)
@@ -21,6 +21,10 @@ args = op.parse_args()
 
 CHUNKSIZE = 10 ** 4
 if not args.features: args.features = 64 # give a default value of all features
+if not len(args.files) >= 2:
+    op.print_usage(file=sys.stderr)
+    print('Input and output files must be given as argument', file=sys.stderr)
+    sys.exit(1)
 
 # READ FEATURES FROM features/*.txt files
 # list of files containing the features
