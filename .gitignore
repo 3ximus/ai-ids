@@ -7,10 +7,8 @@ dist
 # data
 csv/*
 pcap/*
-flows/*
 dist/*
-scripts/utils/*.pyc
-neurals/*
+saved_neural_networks/*
 # virtual environment
 IDS/*
 

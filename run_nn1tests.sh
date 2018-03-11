@@ -12,5 +12,5 @@ filename=$(basename $1)
 name=${filename%.*}
 ./CICFlowMeter $1 ../../csv/real-datasets/extracted/
 cd ../..
-python scripts/utils/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f${2}
-python scripts/layer1-classifier.py csv/selected-compacted-datasets/${2}features/distributed/trainingNN1.csv  csv/real-datasets/compacted/${2}features/${name}.test
+python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f${2}
+python classifiers/layer1-classifier.py csv/selected-compacted-datasets/${2}features/distributed/trainingNN1.csv  csv/real-datasets/compacted/${2}features/${name}.test
