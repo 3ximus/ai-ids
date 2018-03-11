@@ -1,32 +1,33 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import numpy as np
-import pickle, sys, argparse
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, confusion_matrix, precision_score
+import sys, argparse
+from classifier_functions import save_model, load_model, print_stats
 from sklearn.neural_network import MLPClassifier
-from sklearn.model_selection import GridSearchCV
-from sklearn import preprocessing
-from sklearn.preprocessing import Normalizer
 
-#USAGE: layer1-classifier training_dataset.csv testing_dataset.csv
-#       layer1-classifier neural_network1.sav testing_dataset.csv
+# USAGE: layer1-classifier training_dataset.csv testing_dataset.csv
+#        layer1-classifier neural_network1.sav testing_dataset.csv
 
 # =====================
-# ARGUMENT PARSING
+#   ARGUMENT PARSING
 # =====================
 
 op = argparse.ArgumentParser( description="Distinguish MALIGN flows")
-op.add_argument('files', metavar='file', nargs='*', help='')
-op.add_argument('-l', '--load', action='store_true', help="load neural network", dest='load')
+op.add_argument('files', metavar='file', nargs='+', help='train and test data files, if "-l | --load" option is given then just give the test data')
+op.add_argument('-l', '--load', dest='load', nargs=1, metavar='NN_FILE', help="load neural network")
 args = op.parse_args()
+
+if not args.load and len(args.files) != 2:
+    op.print_usage(file=sys.stderr)
+    print('train and test data must be given', file=sys.stderr)
+    sys.exit(1)
 
 # =====================
 #     CONFIGURATION
 # =====================
 
-LABELS = 4 # 4, 7, 11
 # Attack Mapping for output encoding, DoS-Attack is used when refering to all DoS type attacks. DDoS value is 0 for easier output
+LABELS = 4 # 4, 7, 11
 ATTACK_KEYS = ["DoS-Attack", "PortScan", "FTP-Patator", "SSH-Patator", "Bot", "Infiltration", "Heartbleed", "DoS Hulk", "DoS GoldenEye", "DoS slowloris", "DoS Slowhttptest", "DDoS"]
 ATTACK_INDEX = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0]
 ATTACKS = dict(zip(ATTACK_KEYS, ATTACK_INDEX[:7] + (ATTACK_INDEX[-5:] if LABELS > 7 else [0] * 5)))
@@ -39,24 +40,8 @@ PARAM_GRID = [{
 
 
 # =====================
-#      FUNCTIONS
+#       FUNCTIONS
 # =====================
-
-def save_model(filename, clfmodel):
-    # save the model to disk
-    print("Saving neural-network...")
-    model_file = open(filename,'wb')
-    pickle.dump(clfmodel, model_file)
-    model_file.close()
-    return
-
-def load_model(filename):
-    # load the model from disk
-    print("Loading neural-network...")
-    model_file = open(filename, 'rb')
-    loaded_model = pickle.load(model_file)
-    model_file.close()
-    return loaded_model
 
 def parse_csvdataset(filename):
     x_in = []
@@ -65,7 +50,6 @@ def parse_csvdataset(filename):
         for line in fd:
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])
-            y_tmp = [0] * LABELS
             try:
                 y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
             except IndexError:
@@ -76,26 +60,10 @@ def parse_csvdataset(filename):
                 sys.exit(1)
     return x_in, y_in
 
-def print_stats(y_predicted_lst, y_test_lst, train_label_count=None):
-    print("MLP Correctly Classified:", accuracy_score(y_test, y_predicted, normalize=False) , "/" , len(y_predicted))
-    print("MLP Accuracy: ", accuracy_score(y_test, y_predicted, normalize=True))
-    # for the metric below use 'micro' for the precision value: tp / (tp + fp) , it seems to be the same as accuracy_score...
-    print("MLP Precision:", precision_score(y_test.argmax(1), y_predicted.argmax(1), average='macro'),'\n') # Calculate metrics for each label, and find their unweighted mean. This does not take label imbalance into account.
-    print("# Flows             Type  Predicted / TOTAL")
-    if train_label_count==None: train_label_count = [2000]*LABELS
-    y_predicted_lst = y_predicted.tolist()
-    y_test_lst = y_test.tolist()
-    for i in range(LABELS) if LABELS != 11 else [x for x in range(1,LABELS)] + [0]: # put Dos attacks together
-        predict, total = y_predicted_lst.count(OUTPUTS[i]), y_test_lst.count(OUTPUTS[i])
-        color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
-        print("%s% 7d %16s     % 6d / %d\033[m" % (color, train_label_count[i], 'DDoS' if LABELS == 11 and i == 0 else ATTACK_KEYS[i], predict, total))
-    non_desc = sum((1 for elem in y_predicted_lst if elem.count(1) != 1))
-    if non_desc: print("Non-descriptive output count:\033[1;33m", non_desc,"\033[mtest values")
-
 def train_new_network(filename):
     print('Reading Training Dataset...')
     X_train, y_train = parse_csvdataset(filename)
-    train_label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
+    label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
     #scaler = preprocessing.StandardScaler().fit(X_train)
@@ -103,7 +71,7 @@ def train_new_network(filename):
     neural_network1 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(64), random_state=1)
     print("Training... (" + sys.argv[1] + ")")
     neural_network1.fit(X_train, y_train)
-    return train_label_count, neural_network1
+    return label_count, neural_network1
 
 def predict(neural_network1, filename):
     print('Reading Test Dataset...')
@@ -117,17 +85,16 @@ def predict(neural_network1, filename):
 
 if __name__ == '__main__':
     if args.load:
-        neural_network1 = load_model(sys.argv[1])
+        neural_network1 = load_model(args.load.pop())
     else:
-        train_label_count, neural_network1 = train_new_network(sys.argv[1])
+        label_count, neural_network1 = train_new_network(args.files[0])
         save_model('neurals/neural_network1.sav', neural_network1)
 
-    y_test, y_predicted = predict(neural_network1, sys.argv[2])
+    y_test, y_predicted = predict(neural_network1, args.files[-1])
 
-    if args.load:
-        print_stats(y_predicted, y_test)
-    else:
-        print_stats(y_predicted, y_test, train_label_count)
+    print_stats(y_predicted, y_test, LABELS, OUTPUTS,
+                lambda i: 'DDoS' if LABELS == 11 and i == 0 else ATTACK_KEYS[i],
+                None if args.load else label_count)
 
 # train_test_split is not working as expected
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
@@ -136,6 +103,6 @@ if __name__ == '__main__':
     #MultilayerPerceptron = MLPClassifier()
     #print("Searching Grid")
     #clf = GridSearchCV(MultilayerPerceptron, PARAM_GRID, cv=3, scoring='accuracy')
-    
+
     #print("Best parameters set found on development set:")
     #print(clf)

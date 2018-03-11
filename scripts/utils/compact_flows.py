@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import sys, argparse, re, glob
-import numpy as np, pandas
+import pandas
 from os import path
 from loading import progress_bar
 
-try: # beacause python 2 -.-
-   input = raw_input
-except NameError:
-   pass
+# beacause python 2 -.-
+try: input = raw_input
+except NameError: pass
 
-op = argparse.ArgumentParser(description="Select features, filter and label flows.")
+op = argparse.ArgumentParser(description="Select features, filter and label flows. Uses the .txt files inside features/ to choose wich features to extract")
 op.add_argument('files', metavar='file', nargs='+', help='list of input files and output [last file is the output, if this file is a directory all files are processed separately into their respective output files]')
 op.add_argument('-m', '--manual-label', action='store_true', help="always manually label data", dest='manual_label')
 op.add_argument('-b', '--benign', action='store_true', help="write only benign flows, in absence of this flag writes only non benign flows", dest='benign')
@@ -59,7 +58,7 @@ for i, in_file in enumerate(args.files[:-1]):
         df = df[df["Flow Byts/s"].notnull()]
         df = df[df["Flow Pkts/s"].notnull()]
         try: df[FEATURES[args.features]].to_csv(of_names[i%len(of_names)], mode='a', header=False)
-        except:
+        except IndexError:
             print('Number of features is not correct according to the flag given (%d), please fix this.' % args.features, file=sys.stderr)
             sys.exit(1)
     for of in of_descriptors: of.close() # close all the files
@@ -71,7 +70,7 @@ for i, ofr in enumerate(read_f):
     ofr.close() # close read
     ofw = next(write_f)
     ofw.write(write_me)
-    ofw.close() # close 
+    ofw.close() # close
 
 # DATASETS DISPONIBILIZADOS: 84 features + 1 feature (no caso do DDoS, 'External IP')
 # DATASETS A SER CRIADOS: 83 features, nao incluem em caso algum o atributo 'External IP'

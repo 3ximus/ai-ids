@@ -3,9 +3,9 @@ import sys, argparse
 from os import path
 from loading import progress_bar
 
-op = argparse.ArgumentParser(description='Setup train or test data with fixed amount of features')
+op = argparse.ArgumentParser(description="Setup train or test data with fixed amount of features. Uses the file 'train_data.config' to read ammount of data to extract into separate datasets")
 op.add_argument('files', metavar='file', nargs='+', help='input files. Last file is the output directory')
-op.add_argument('-i', '--ignore-counts', action='store_true', help="ignore count of tests and dump all the data", dest='ignore_count')
+op.add_argument('-i', '--ignore-counts', action='store_true', help="ignore count of tests from 'train_data.config' file and dump all the data", dest='ignore_count')
 args = op.parse_args()
 
 if not len(args.files) >= 2:

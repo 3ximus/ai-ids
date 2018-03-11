@@ -10,17 +10,17 @@ def progress_bar(percent_complete, show_percentage=False, align_right=False, bar
 
 		Parameters
 		----------
-		percent_complete:   integer value
-		show_percentage:    boolean to show percentage value after the bar
-		align_right:        align percentage bar to the right
-		bar_body:           character element of the filled bar
-		bar_empty:          character element of the empty bar
-		bar_begin:          left delimiter of the bar
-		bar_end:            right delimiter of the bar
-		bar_size:           size of the bar in characters
-		bar_arrow:          character on the tip of the filled bar
-		initial_text:       text to show before the bar
-		ending_text:        text to show after the bar once loading finishes
+		- percent_complete   integer value
+		- show_percentage    boolean to show percentage value after the bar
+		- align_right        align percentage bar to the right
+		- bar_body           character element of the filled bar
+		- bar_empty          character element of the empty bar
+		- bar_begin          left delimiter of the bar
+		- bar_end            right delimiter of the bar
+		- bar_size           size of the bar in characters
+		- bar_arrow          character on the tip of the filled bar
+		- initial_text       text to show before the bar
+		- ending_text        text to show after the bar once loading finishes
 
 		Returns
 		-------
