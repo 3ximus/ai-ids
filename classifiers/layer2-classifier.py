@@ -6,7 +6,7 @@ from classifier_functions import save_model, load_model, print_stats
 from sklearn.neural_network import MLPClassifier
 
 # USAGE: layer2-classifier training_dataset.csv testing_dataset.csv
-#        layer2-classifier neural_network2.sav testing_dataset.csv
+#        layer2-classifier -l neural_network2.sav testing_dataset.csv
 
 # =====================
 #   ARGUMENT PARSING
