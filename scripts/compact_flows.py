@@ -32,7 +32,6 @@ features_count = [sum([1 for l in fd if l not in ('\n','',' ')])-1 for fd in (op
 features_list = [f.read().splitlines() for f in (open(x,'r') for x in features_files)]
 FEATURES = dict(zip(features_count, features_list)) # zip everything into a dictionary
 KNOWN_LABELS = {"portscan": "PortScan", "ftp.?patator": "FTP-Patator", "ssh.?patator": "SSH-Patator", "bot": "Bot", "infiltration": "Infiltration", "heartbleed": "Heartbleed", "dos.?hulk": "DoS Hulk", "dos.?goldeneye": "DoS GoldenEye", "dos.?slowloris": "DoS slowloris", "dos.?slowhttptest": "DoS Slowhttptest", "ddos": "DDoS"}
-print(FEATURES.keys())
 if path.isdir(args.files[-1]): # directory output, process files separately
     of_names = [args.files[-1] + '/' + path.splitext(path.basename(in_file))[0] + '.test' for in_file in args.files[:-1]]
 else: # file is a regular file, process all inputs into this file
