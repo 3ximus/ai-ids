@@ -4,7 +4,7 @@ dirpath = "/root/Desktop/PCAP_SANDBOX/ai-ids/csv/selected-compacted-datasets/21f
 dirlist = os.listdir(dirpath)
 for filename in dirlist:
 	absfilename = dirpath + filename
-	if(filename.find("csv")!=-1 and filename.find("DoS")!=-1):
+	if'csv' in filename and "DoS" in filename):
 		of = open(os.path.dirname(absfilename) + os.sep + "test_" + os.path.splitext(os.path.basename(absfilename))[0] + ".test","w")
 		f = open(absfilename, "r")
 		i=0

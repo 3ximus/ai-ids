@@ -68,7 +68,7 @@ def train_new_network(filename):
     y_train = np.array(y_train, dtype='float64')
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
-    neural_network1 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(64), random_state=1)
+    neural_network1 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(32), random_state=1)
     print("Training... (" + sys.argv[1] + ")")
     neural_network1.fit(X_train, y_train)
     return label_count, neural_network1
@@ -80,7 +80,7 @@ def predict(neural_network1, filename):
     y_test = np.array(y_test, dtype='float64')
     #X_test = scaler.transform(X_test)      # normalize
     print("Predicting... (" + filename + ")\n")
-    y_predicted = neural_network1.predict(X_test)
+    y_predicted = neural_network1.predict_proba(X_test)
     return y_test, y_predicted
 
 if __name__ == '__main__':

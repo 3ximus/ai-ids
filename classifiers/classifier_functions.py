@@ -34,7 +34,7 @@ def print_stats(y_predicted, y_test, labels, outputs, get_class_name, label_coun
         - get_class_name  function that given the output index returns the output label class name
         - label_count     count of train data for each label
     '''
-
+    y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
     print("MLP Correctly Classified:", accuracy_score(y_test, y_predicted, normalize=False) , "/" , len(y_predicted))
     print("MLP Accuracy: ", accuracy_score(y_test, y_predicted, normalize=True))
     # For the metric below use 'micro' for the precision value: tp / (tp + fp)
