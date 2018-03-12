@@ -12,13 +12,12 @@ op = argparse.ArgumentParser(description="Select features, filter and label flow
 op.add_argument('files', metavar='file', nargs='+', help='list of input files and output [last file is the output, if this file is a directory all files are processed separately into their respective output files]')
 op.add_argument('-m', '--manual-label', action='store_true', help="always manually label data", dest='manual_label')
 op.add_argument('-b', '--benign', action='store_true', help="write only benign flows, in absence of this flag writes only non benign flows", dest='benign')
-op.add_argument('-f9', '--features9', action='store_const', help="9 features", dest='features', const=9)
-op.add_argument('-f21', '--features21', action='store_const', help="21 features", dest='features', const=21)
-op.add_argument('-fall', '--featuresall', action='store_const', help="all features (64)", dest='features', const=64)
+op.add_argument('-f', '--features', help="number of features", dest='features')
 args = op.parse_args()
 
 CHUNKSIZE = 10 ** 4
 if not args.features: args.features = 64 # give a default value of all features
+args.features = int(args.features)
 if not len(args.files) >= 2:
     op.print_usage()
     print('Input and output files must be given as argument')
@@ -33,7 +32,7 @@ features_count = [sum([1 for l in fd if l not in ('\n','',' ')])-1 for fd in (op
 features_list = [f.read().splitlines() for f in (open(x,'r') for x in features_files)]
 FEATURES = dict(zip(features_count, features_list)) # zip everything into a dictionary
 KNOWN_LABELS = {"portscan": "PortScan", "ftp.?patator": "FTP-Patator", "ssh.?patator": "SSH-Patator", "bot": "Bot", "infiltration": "Infiltration", "heartbleed": "Heartbleed", "dos.?hulk": "DoS Hulk", "dos.?goldeneye": "DoS GoldenEye", "dos.?slowloris": "DoS slowloris", "dos.?slowhttptest": "DoS Slowhttptest", "ddos": "DDoS"}
-
+print(FEATURES.keys())
 if path.isdir(args.files[-1]): # directory output, process files separately
     of_names = [args.files[-1] + '/' + path.splitext(path.basename(in_file))[0] + '.test' for in_file in args.files[:-1]]
 else: # file is a regular file, process all inputs into this file

@@ -15,8 +15,4 @@ Pkt Len Var
 Pkt Size Avg
 Fwd Seg Size Avg
 Bwd Seg Size Avg
-Subflow Fwd Pkts
-Subflow Fwd Byts
-Subflow Bwd Pkts
-Subflow Bwd Byts
 Label

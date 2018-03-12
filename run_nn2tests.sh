@@ -4,12 +4,7 @@ set -e
 if [ -z "$1" ] ; then
 	echo "Pcap test-file missing"
 	exit 1
-fi
-if [ -z "$2" ] ; then
-	echo "Label missing"
-	exit 1
-fi
-if [ -z "$3" ] ; then
+elif [ -z "$2" ] ; then
 	echo "Number of features missing"
 	exit 1
 fi
@@ -19,10 +14,10 @@ filename=$(basename $1)
 name=${filename%.*}
 ./CICFlowMeter $1 ../../csv/real-datasets/extracted/
 cd ../..
-sed -i "s/No Label/$2/" csv/real-datasets/extracted/${name}.csv
-if [ "$2" == "BENIGN" ] ; then
-	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${3}features/${name}.test -f${3} --benign
+[[ -d "csv/real-datasets/compacted/${2}features/" ]] || mkdir csv/real-datasets/compacted/${2}features/
+if [ "$3" == "BENIGN" ] ; then
+	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f${2} --benign
 else
-	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${3}features/${name}.test -f${3}
+	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f${2}
 fi
-python classifiers/layer2-classifier.py csv/selected-compacted-datasets/${3}features/distributed/benign-individual/benign-dos-attack.csv  csv/real-datasets/compacted/${3}features/${name}.test
+python classifiers/layer2-classifier.py csv/selected-compacted-datasets/${2}features/benign-individual/benign-dos-attack.csv  csv/real-datasets/compacted/${2}features/${name}.test
