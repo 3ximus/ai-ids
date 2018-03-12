@@ -18,7 +18,8 @@ with open(path.dirname(sys.argv[0])+'/train_data.config', 'r') as conf:
 	conf_lines = [[i.strip() for i in line.rsplit(' ', 1)] for line in conf.read().splitlines()]
 
 # open output files
-of_descriptors = [open('%s/%s.csv' % (args.files[-1], line[0].replace(' ','-')), 'w') for line in conf_lines]
+of_names = ['%s/%s.csv' % (args.files[-1], line[0].replace(' ','-')) for line in conf_lines]
+of_descriptors = [open(of, 'w') for of in of_names]
 [of.write(open(args.files[0],'r').readline()) for of in of_descriptors]
 counters = [0]*len(conf_lines)
 for x, in_file in enumerate(args.files[:-1]):
@@ -26,10 +27,10 @@ for x, in_file in enumerate(args.files[:-1]):
 	with open(in_file, 'r') as if_:
 		for line in if_:
 			for i, c in enumerate(conf_lines): # for each attack
-				if counters[i] < int(c[1]) and c[0] in line: # check attack type against line
+				if "Infinity" not in line and counters[i] < int(c[1]) and c[0] in line: # check attack type against line
 					of_descriptors[i].write(line)
 					if not args.ignore_count: counters[i] += 1
+
+
 for of in of_descriptors:
 	of.close()
-
-
