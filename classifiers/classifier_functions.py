@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os, pickle
 from sklearn.metrics import accuracy_score, precision_score
 
@@ -15,7 +16,7 @@ def load_model(filename):
     '''Load the model from disk'''
     print("Loading neural-network...")
     if not os.path.isfile(filename):
-        print("File %s does not exist." % filename, file=sys.stderr)
+        print("File %s does not exist." % filename)
         sys.exit(1)
     model_file = open(filename, 'rb')
     loaded_model = pickle.load(model_file)
