@@ -10,9 +10,9 @@ for file in ${@:1:${#}-1}; do
 	cd ../..
 done
 
-[[ -d "csv/test/compacted/${@: -1}features/" ]] || mkdir "csv/test/compacted/${@: -1}features/"
+[[ -d "csv/test/${@: -1}features/" ]] || mkdir "csv/test/${@: -1}features/"
 if [ "$3" == "BENIGN" ] ; then
-	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/compacted/${@: -1}features/" -f "scripts/features/${@: -1}.txt" --benign
+	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/${@: -1}features/" -f "scripts/features/${@: -1}.txt" --benign
 else
-	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/compacted/${@: -1}features/" -f "scripts/features/${@: -1}.txt"
+	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/${@: -1}features/" -f "scripts/features/${@: -1}.txt"
 fi
