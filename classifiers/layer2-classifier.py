@@ -82,16 +82,16 @@ def predict(neural_network2, filename):
     return y_test, y_predicted
 
 if __name__ == '__main__':
-    if args.load:
+    if args.load: # TODO better load/save model
         neural_network2 = load_model(args.load.pop())
     else:
         label_count, neural_network2 = train_new_network(args.files[0])
-        save_model('neurals/neural_network2.sav', neural_network2)
+        save_model('saved_neural_networks/layer2.sav', neural_network2)
 
     y_test, y_predicted = predict(neural_network2, args.files[-1])
 
     print_stats(y_predicted, y_test, LABELS, OUTPUTS,
-                lambda i: CLASSIFICATIONS.keys()[i],
+                lambda i: list(CLASSIFICATIONS.keys())[i],
                 None if args.load else label_count)
 
 # train_test_split is not working as expected
