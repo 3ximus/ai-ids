@@ -2,15 +2,17 @@
 set -e
 # args[1:-1]: pcap files, arg[-1]: n_features
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
-for file in "${@:1:${#}-1}"; do
+echo "${@: -1}"
+exit
+for file in ${@:1:${#}-1}; do
 	cd dist/bin
-	./CICFlowMeter $file ../../csv/test/extracted/
+	./CICFlowMeter "$file" ../../csv/test/extracted/
 	cd ../..
 done
 
-[[ -d "csv/test/compacted/${@:$#}features/" ]] || mkdir csv/test/compacted/${@:$#}features/
+[[ -d "csv/test/compacted/${@: -1}features/" ]] || mkdir "csv/test/compacted/${@: -1}features/"
 if [ "$3" == "BENIGN" ] ; then
-	python scripts/compact_flows.py csv/test/extracted/*.csv csv/test/compacted/${@:$#}features/ -f scripts/features/${@:$#}.txt --benign
+	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/compacted/${@: -1}features/" -f "scripts/features/${@: -1}.txt" --benign
 else
-	python scripts/compact_flows.py csv/test/extracted/*.csv csv/test/compacted/${@:$#}features/ -f scripts/features/${@:$#}.txt
+	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/compacted/${@: -1}features/" -f "scripts/features/${@: -1}.txt"
 fi

@@ -12,7 +12,8 @@ except NameError: pass
 op = argparse.ArgumentParser(description="Select features, filter and label flows. Uses the .txt files inside features/ to choose wich features to extract")
 op.add_argument('files', metavar='file', nargs='+', help='list of input files and output [last file is the output, if this file is a directory all files are processed separately into their respective output files]')
 op.add_argument('-m', '--manual-label', action='store_true', help="always manually label data", dest='manual_label')
-op.add_argument('-b', '--benign', action='store_true', help="write only benign flows, in absence of this flag writes only non benign flows", dest='benign')
+op.add_argument('--benign', action='store_true', help="write only benign flows, in absence of this flag writes only non benign flows", dest='benign')
+op.add_argument('-s', '--suffix', help="suffix of output files", dest='suffix', default=['.csv'], nargs=1)
 op.add_argument('-f', '--features', help="features file", dest='features')
 args = op.parse_args()
 
@@ -35,18 +36,19 @@ KNOWN_LABELS = {"portscan": "PortScan", "ftp.?patator": "FTP-Patator", "ssh.?pat
                 "dos.?slowhttptest": "DoS Slowhttptest", "ddos": "DDoS"}
 
 if path.isdir(args.files[-1]): # directory output, process files separately
-    of_names = [args.files[-1] + '/' + path.splitext(path.basename(in_file))[0] + '.test' for in_file in args.files[:-1]]
+    of_names = [args.files[-1] + '/' + path.splitext(path.basename(in_file))[0] + args.suffix[0] for in_file in args.files[:-1]]
 else: # file is a regular file, process all inputs into this file
     of_names = [args.files[-1],]
 
 of_descriptors = [open(of, 'w') for of in of_names]
 print("Processing...")
 for i, in_file in enumerate(args.files[:-1]):
-    nlabel = None
-    for k in KNOWN_LABELS: # regex
-        if re.search(k, in_file, re.I):
-            nlabel = KNOWN_LABELS[k]
-            break
+    nlabel = 'BENIGN' if args.benign else None
+    if not args.benign:
+        for k in KNOWN_LABELS: # regex
+            if re.search(k, in_file, re.I):
+                nlabel = KNOWN_LABELS[k]
+                break
     if args.manual_label or not nlabel: # ask user for new label
         nlabel = input('Choose label for %s %s > ' % (in_file, '[PRESS ENTER: %s]' % nlabel if nlabel else '')) or nlabel
     total_chunks = sum(1 for row in open(in_file,'r')) / CHUNKSIZE or 1
