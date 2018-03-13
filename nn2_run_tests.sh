@@ -12,10 +12,10 @@ filename=$(basename "$1")
 name=${filename%.*}
 ./CICFlowMeter "$1" ../../csv/test/extracted/
 cd ../..
-[[ -d "csv/test/compacted/${2}features/" ]] || mkdir "csv/test/compacted/${2}features/"
+[[ -d "csv/test/${2}features/" ]] || mkdir "csv/test/${2}features/"
 if [ "$3" == "BENIGN" ] ; then
-	python scripts/compact_flows.py "csv/test/extracted/${name}.csv" "csv/test/compacted/${2}features/${name}.csv" -f "scripts/features/${2}.txt" --benign
+	python scripts/compact_flows.py "csv/test/extracted/${name}.csv" "csv/test/${2}features/${name}.csv" -f "scripts/features/${2}.txt" --benign
 else
-	python scripts/compact_flows.py "csv/test/extracted/${name}.csv" "csv/test/compacted/${2}features/${name}.csv" -f "scripts/features/${2}.txt"
+	python scripts/compact_flows.py "csv/test/extracted/${name}.csv" "csv/test/${2}features/${name}.csv" -f "scripts/features/${2}.txt"
 fi
-python classifiers/layer2-classifier.py "csv/train/${2}features/benign-individual/benign-dos-attack.csv"  "csv/test/compacted/${2}features/${name}.csv"
+python classifiers/layer2-classifier.py "csv/train/${2}features/benign-individual/benign-dos-attack.csv"  "csv/test/${2}features/${name}.csv"
