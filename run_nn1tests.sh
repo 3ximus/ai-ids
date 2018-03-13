@@ -14,8 +14,8 @@ name=${filename%.*}
 cd ../..
 [[ -d "csv/real-datasets/compacted/${2}features/" ]] || mkdir csv/real-datasets/compacted/${2}features/
 if [ "$3" == "BENIGN" ] ; then
-	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f${2} --benign
+	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f scripts/features/${2}.txt --benign
 else
-	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f${2}
+	python scripts/compact_flows.py csv/real-datasets/extracted/${name}.csv csv/real-datasets/compacted/${2}features/${name}.test -f scripts/features/${2}.txt
 fi
 python classifiers/layer1-classifier.py csv/selected-compacted-datasets/${2}features/trainingNN1.csv  csv/real-datasets/compacted/${2}features/${name}.test
