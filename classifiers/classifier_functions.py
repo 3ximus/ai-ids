@@ -23,7 +23,7 @@ def load_model(filename):
     model_file.close()
     return loaded_model
 
-def print_stats(y_predicted, y_test, labels, outputs, get_class_name, filename, label_count=None):
+def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filename, label_count=None):
     '''Print MLP Statistics on a test dataset
 
         Parameters
@@ -37,7 +37,7 @@ def print_stats(y_predicted, y_test, labels, outputs, get_class_name, filename, 
     '''
     y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
     print("MLP Correctly Classified:", accuracy_score(y_test, y_predicted, normalize=False) , "/" , len(y_predicted))
-    print("MLP Accuracy (" + os.path.basename(filename) + "):" + str(accuracy_score(y_test, y_predicted, normalize=True)))
+    print("MLP Accuracy (" + os.path.basename(test_filename) + "):" + str(accuracy_score(y_test, y_predicted, normalize=True)))
     # For the metric below use 'micro' for the precision value: tp / (tp + fp)
     #  it seems to be the same as accuracy_score...
     # macro calculates metrics for each label, and finds their unweighted mean.
