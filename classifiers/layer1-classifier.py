@@ -2,6 +2,7 @@
 from __future__ import print_function
 import numpy as np
 import sys, argparse
+from os import path
 from classifier_functions import save_model, load_model, print_stats
 from sklearn.neural_network import MLPClassifier
 
@@ -18,8 +19,8 @@ op.add_argument('-l', '--load', dest='load', nargs=1, metavar='NN_FILE', help="l
 args = op.parse_args()
 
 if not args.load and len(args.files) != 2:
-    op.print_usage(file=sys.stderr)
-    print('train and test data must be given', file=sys.stderr)
+    op.print_usage()
+    print('train and test data must be given')
     sys.exit(1)
 
 # =====================
@@ -53,10 +54,10 @@ def parse_csvdataset(filename):
             try:
                 y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
             except IndexError:
-                print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]), file=sys.stderr)
+                print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
                 sys.exit(1)
             except KeyError:
-                print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]), file=sys.stderr)
+                print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]))
                 sys.exit(1)
     return x_in, y_in
 
@@ -69,7 +70,7 @@ def train_new_network(filename):
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
     neural_network1 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(16,8), random_state=1)
-    print("Training... (" + sys.argv[1] + ")")
+    print("Training... (" + args.files[0] + ")")
     neural_network1.fit(X_train, y_train)
     return label_count, neural_network1
 
@@ -85,6 +86,7 @@ def predict(neural_network1, filename):
 
 if __name__ == '__main__':
     saved_path = 'saved_neural_networks/' + args.files[0].strip('/.csv').replace('/','-')
+    print(saved_path)
     LOADED = True
     if path.isfile(saved_path) and not args.load: # default if it exists
         neural_network1 = load_model(saved_path)
@@ -99,7 +101,7 @@ if __name__ == '__main__':
 
     print_stats(y_predicted, y_test, LABELS, OUTPUTS,
                 lambda i: 'DDoS' if LABELS == 11 and i == 0 else ATTACK_KEYS[i],
-                None if args.load else label_count)
+                None if LOADED else label_count)
 
 # train_test_split is not working as expected
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)

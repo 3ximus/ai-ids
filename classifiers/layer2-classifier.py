@@ -19,8 +19,8 @@ op.add_argument('-l', '--load', dest='load', nargs=1, metavar='NN_FILE', help="l
 args = op.parse_args()
 
 if not args.load and len(args.files) != 2:
-    op.print_usage(file=sys.stderr)
-    print('train and test data must be given', file=sys.stderr)
+    op.print_usage()
+    print('train and test data must be given')
     sys.exit(1)
 
 # =====================
@@ -52,10 +52,10 @@ def parse_csvdataset(filename):
             try:
                 y_in.append(OUTPUTS[CLASSIFICATIONS[tmp[-1]]]) # choose result based on label
             except IndexError:
-                print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]), file=sys.stderr)
+                print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
                 sys.exit(1)
             except KeyError:
-                print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]), file=sys.stderr)
+                print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]))
                 sys.exit(1)
     return x_in, y_in
 
@@ -68,7 +68,7 @@ def train_new_network(filename):
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
     neural_network2 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(64), random_state=1)
-    print("Training... (" + sys.argv[1] + ")")
+    print("Training... (" + args.files[0] + ")")
     neural_network2.fit(X_train, y_train)
     return label_count, neural_network2
 

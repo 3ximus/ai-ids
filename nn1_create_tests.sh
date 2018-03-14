@@ -2,8 +2,6 @@
 set -e
 # args[1:-1]: pcap files, arg[-1]: n_features
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
-echo "${@: -1}"
-exit
 for file in ${@:1:${#}-1}; do
 	cd dist/bin
 	./CICFlowMeter "$file" ../../csv/test/extracted/
