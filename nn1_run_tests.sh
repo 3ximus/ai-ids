@@ -8,3 +8,5 @@ fi
 for test in csv/test/${1}features/*.csv; do
 	python classifiers/layer1-classifier.py "csv/train/${1}features/layer1/trainingNN1.csv" "$test"
 done
+
+rm saved_neural_networks/layer1/*

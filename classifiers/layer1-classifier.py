@@ -70,7 +70,7 @@ def train_new_network(filename):
     y_train = np.array(y_train, dtype='float64')
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
-    neural_network1 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(16,8), random_state=1)
+    neural_network1 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(40,16), random_state=1)
     print("Training... (" + args.files[0] + ")")
     neural_network1.fit(X_train, y_train)
     return label_count, neural_network1
