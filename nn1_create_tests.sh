@@ -7,10 +7,6 @@ for file in ${@:1:${#}-1}; do
 	./CICFlowMeter "$file" ../../csv/test/extracted/
 	cd ../..
 done
-
 [[ -d "csv/test/${@: -1}features/" ]] || mkdir "csv/test/${@: -1}features/"
-if [ "$3" == "BENIGN" ] ; then
-	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/${@: -1}features/" -f "scripts/features/${@: -1}.txt" --benign
-else
-	python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/${@: -1}features/" -f "scripts/features/${@: -1}.txt"
-fi
+python scripts/compact_flows.py csv/test/extracted/*.csv "csv/test/${@: -1}features/" -f "scripts/features/${@: -1}.txt"
+

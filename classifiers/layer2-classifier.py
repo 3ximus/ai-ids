@@ -83,7 +83,7 @@ def predict(neural_network2, filename):
     return y_test, y_predicted
 
 if __name__ == '__main__':
-    saved_path = 'saved_neural_networks/' + args.files[0].strip('/.csv').replace('/','-')
+    saved_path = 'saved_neural_networks/layer2/' + args.files[0].strip('/.csv').replace('/','-')
     LOADED = True
     if path.isfile(saved_path) and not args.load: # default if it exists
         neural_network2 = load_model(saved_path)
