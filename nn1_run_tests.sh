@@ -6,5 +6,5 @@ if [ -z "$1" ] ; then
 fi
 
 for test in csv/test/${1}features/*.csv; do
-	python classifiers/layer1-classifier.py "csv/train/${1}features/layer1/trainingNN1.csv" "$test"
+	python classifiers/layer1-classifier.py "csv/train/${1}features/layer1/trainingNN1.csv" "$test" "${@:2:$#}"
 done
