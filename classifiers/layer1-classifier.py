@@ -16,6 +16,7 @@ from sklearn.neural_network import MLPClassifier
 op = argparse.ArgumentParser( description="Distinguish MALIGN flows")
 op.add_argument('files', metavar='file', nargs='+', help='train and test data files, if "-l | --load" option is given then just give the test data')
 op.add_argument('-l', '--load', dest='load', nargs=1, metavar='NN_FILE', help="load neural network")
+op.add_argument('-f', '--force-train', dest='force_train', action='store_true', help="Force training and ignore autoloading")
 args = op.parse_args()
 
 if not args.load and len(args.files) != 2:
@@ -87,9 +88,9 @@ def predict(neural_network1, filename):
 if __name__ == '__main__':
     saved_path = 'saved_neural_networks/layer1/' + args.files[0].strip('/.csv').replace('/','-')
     LOADED = True
-    if path.isfile(saved_path) and not args.load: # default if it exists
+    if not args.force_train and path.isfile(saved_path) and not args.load: # default if it exists
         neural_network1 = load_model(saved_path)
-    elif args.load: # load nn if one is given
+    elif not args.force_train and args.load: # load nn if one is given
         neural_network1 = load_model(args.load.pop())
     else: # create a new network
         label_count, neural_network1 = train_new_network(args.files[0])

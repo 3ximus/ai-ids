@@ -33,7 +33,7 @@ FEATURES_LIST = open(args.features, 'r').read().splitlines()
 KNOWN_LABELS = {"portscan": "PortScan", "ftp.?patator": "FTP-Patator", "ssh.?patator": "SSH-Patator",
                 "bot": "Bot", "infiltration": "Infiltration", "heartbleed": "Heartbleed",
                 "dos.?hulk": "DoS Hulk", "dos.?goldeneye": "DoS GoldenEye", "dos.?slowloris": "DoS slowloris",
-                "dos.?slowhttptest": "DoS Slowhttptest", "ddos": "DDoS"}
+                "dos.?slowhttptest": "DoS Slowhttptest", "ddos": "DDoS", "benign": "BENIGN"}
 
 if path.isdir(args.files[-1]): # directory output, process files separately
     of_names = [args.files[-1] + '/' + path.splitext(path.basename(in_file))[0] + args.suffix[0] for in_file in args.files[:-1]]
@@ -52,7 +52,7 @@ for i, in_file in enumerate(args.files[:-1]):
     if args.manual_label or not nlabel: # ask user for new label
         nlabel = input('Choose label for %s %s > ' % (in_file, '[PRESS ENTER: %s]' % nlabel if nlabel else '')) or nlabel
     total_chunks = sum(1 for row in open(in_file,'r')) / CHUNKSIZE or 1
-    for c, chunk in enumerate(pandas.read_csv(in_file,chunksize=CHUNKSIZE)):
+    for c, chunk in enumerate(pandas.read_csv(in_file,chunksize=CHUNKSIZE,dtype="unicode")):
         progress_bar((c+1) / total_chunks * 100, initial_text=in_file+' ', bar_body="\033[34m-\033[m", bar_arrow="\033[34m>\033[m", align_right=True)
         chunk['Label'] = nlabel # assign new label
         df = chunk[(chunk["Label"] != "BENIGN")] if not args.benign else chunk[(chunk["Label"] == "BENIGN")]
