@@ -84,11 +84,16 @@ def predict(neural_network1, filename):
     return y_test, y_predicted
 
 if __name__ == '__main__':
-    if args.load:
+    saved_path = 'saved_neural_networks/' + args.files[0].strip('/.csv').replace('/','-')
+    LOADED = True
+    if path.isfile(saved_path) and not args.load: # default if it exists
+        neural_network1 = load_model(saved_path)
+    elif args.load: # load nn if one is given
         neural_network1 = load_model(args.load.pop())
-    else:
+    else: # create a new network
         label_count, neural_network1 = train_new_network(args.files[0])
-        save_model('saved_neural_networks/layer1.sav', neural_network1)
+        save_model(saved_path, neural_network1)
+        LOADED = False
 
     y_test, y_predicted = predict(neural_network1, args.files[-1])
 

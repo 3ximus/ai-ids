@@ -2,6 +2,7 @@
 from __future__ import print_function
 import numpy as np
 import sys, argparse
+from os import path
 from classifier_functions import save_model, load_model, print_stats
 from sklearn.neural_network import MLPClassifier
 
@@ -34,7 +35,7 @@ PARAM_GRID = [{
     'activation' : ['identity', 'logistic', 'tanh', 'relu'],
     'solver' : ['lbfgs', 'sgd', 'adam'],
     'hidden_layer_sizes': [
-    (1,),(2,),(3,),(4,),(5,),(6,),(7,),(8,),(9,),(10,),(11,),(12,),(13,),(14,),(15,),(16,),(17,),(18,),(19,),(20,),(21,)]}]
+    (16,),(32,),(64,),(128,)]}]
 
 # =====================
 #       FUNCTIONS
@@ -82,17 +83,22 @@ def predict(neural_network2, filename):
     return y_test, y_predicted
 
 if __name__ == '__main__':
-    if args.load: # TODO better load/save model
+    saved_path = 'saved_neural_networks/' + args.files[0].strip('/.csv').replace('/','-')
+    LOADED = True
+    if path.isfile(saved_path) and not args.load: # default if it exists
+        neural_network2 = load_model(saved_path)
+    elif args.load: # load nn if one is given
         neural_network2 = load_model(args.load.pop())
-    else:
+    else: # create a new network
         label_count, neural_network2 = train_new_network(args.files[0])
-        save_model('saved_neural_networks/layer2.sav', neural_network2)
+        save_model(saved_path, neural_network2)
+        LOADED = False
 
     y_test, y_predicted = predict(neural_network2, args.files[-1])
 
     print_stats(y_predicted, y_test, LABELS, OUTPUTS,
                 lambda i: list(CLASSIFICATIONS.keys())[i],
-                None if args.load else label_count)
+                None if LOADED else label_count)
 
 # train_test_split is not working as expected
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
