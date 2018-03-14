@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
     print_stats(y_predicted, y_test, LABELS, OUTPUTS,
                 lambda i: 'DDoS' if LABELS == 11 and i == 0 else ATTACK_KEYS[i],
-                None if LOADED else label_count)
+                args.files[-1], None if LOADED else label_count)
 
 # train_test_split is not working as expected
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)

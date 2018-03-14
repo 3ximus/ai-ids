@@ -79,7 +79,7 @@ def predict(neural_network2, filename):
     y_test = np.array(y_test, dtype='float64')
     #X_test = scaler.transform(X_test)      # normalize
     print("Predicting... (" + filename + ")\n")
-    y_predicted = neural_network2.predict(X_test)
+    y_predicted = neural_network2.predict_proba(X_test)
     return y_test, y_predicted
 
 if __name__ == '__main__':
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
     print_stats(y_predicted, y_test, LABELS, OUTPUTS,
                 lambda i: list(CLASSIFICATIONS.keys())[i],
-                None if LOADED else label_count)
+                args.files[-1], None if LOADED else label_count)
 
 # train_test_split is not working as expected
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
