@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import numpy as np
-import sys, argparse
+import sys, argparse, hashlib
 from os import path
 from classifier_functions import save_model, load_model, print_stats
 from sklearn.neural_network import MLPClassifier
@@ -16,7 +16,6 @@ from sklearn.neural_network import MLPClassifier
 op = argparse.ArgumentParser( description="Distinguish MALIGN flows")
 op.add_argument('files', metavar='file', nargs='+', help='train and test data files, if "-l | --load" option is given then just give the test data')
 op.add_argument('-l', '--load', dest='load', nargs=1, metavar='NN_FILE', help="load neural network")
-op.add_argument('-f', '--force-train', dest='force_train', action='store_true', help="Force training and ignore autoloading")
 args = op.parse_args()
 
 if not args.load and len(args.files) != 2:
@@ -86,22 +85,22 @@ def predict(neural_network1, filename):
     return y_test, y_predicted
 
 if __name__ == '__main__':
-    saved_path = 'saved_neural_networks/layer1/' + args.files[0].strip('/.csv').replace('/','-')
-    LOADED = True
-    if not args.force_train and path.isfile(saved_path) and not args.load: # default if it exists
+    digester = hashlib.md5()
+    with open(args.files[0], 'rb') as tf: digester.update(tf.read())
+    saved_path = 'saved_neural_networks/layer1/%s-%s' % (args.files[0].strip('/.csv').replace('/','-'), digester.hexdigest())
+    if path.isfile(saved_path) and not args.load: # default if it exists
         neural_network1 = load_model(saved_path)
-    elif not args.force_train and args.load: # load nn if one is given
-        neural_network1 = load_model(args.load.pop())
+    elif args.load: # load nn if one is given
+        neural_network1 = load_model(args.load[0])
     else: # create a new network
         label_count, neural_network1 = train_new_network(args.files[0])
         save_model(saved_path, neural_network1)
-        LOADED = False
 
     y_test, y_predicted = predict(neural_network1, args.files[-1])
 
     print_stats(y_predicted, y_test, LABELS, OUTPUTS,
                 lambda i: 'DDoS' if LABELS == 11 and i == 0 else ATTACK_KEYS[i],
-                args.files[-1], None if LOADED else label_count)
+                args.files[-1], None if not args.load else label_count)
 
 # train_test_split is not working as expected
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
