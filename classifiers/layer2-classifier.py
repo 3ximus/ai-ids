@@ -5,6 +5,8 @@ import sys, argparse, hashlib
 from os import path
 from classifier_functions import save_model, load_model, print_stats
 from sklearn.neural_network import MLPClassifier
+#new
+from sklearn.ensemble import RandomForestRegressor
 
 # USAGE: layer2-classifier training_dataset.csv testing_dataset.csv
 #        layer2-classifier -l neural_network2.sav testing_dataset.csv
@@ -60,26 +62,26 @@ def parse_csvdataset(filename):
     return x_in, y_in
 
 def train_new_network(filename):
-    print('Reading Training Dataset...')
+    print('Reading Training Dataset... (' + filename + ')')
     X_train, y_train = parse_csvdataset(filename)
     label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
-    neural_network2 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(64), random_state=1)
+    random_forest_classifier = RandomForestRegressor(max_depth=3, random_state=0)
     print("Training... (" + args.files[0] + ")")
-    neural_network2.fit(X_train, y_train)
-    return label_count, neural_network2
+    random_forest_classifier.fit(X_train, y_train)
+    return label_count, random_forest_classifier
 
-def predict(neural_network2, filename):
+def predict(random_forest_classifier, filename):
     print('Reading Test Dataset...')
     X_test, y_test = parse_csvdataset(filename)
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
     #X_test = scaler.transform(X_test)      # normalize
     print("Predicting... (" + filename + ")\n")
-    y_predicted = neural_network2.predict_proba(X_test)
+    y_predicted = random_forest_classifier.predict(X_test)
     return y_test, y_predicted
 
 if __name__ == '__main__':
@@ -87,14 +89,15 @@ if __name__ == '__main__':
     with open(args.files[0], 'rb') as tf: digester.update(tf.read())
     saved_path = 'saved_neural_networks/layer2/%s-%s' % (args.files[0].strip('/.csv').replace('/','-'), digester.hexdigest())
     if path.isfile(saved_path) and not args.load: # default if it exists
-        neural_network2 = load_model(saved_path)
+        random_forest_classifier = load_model(saved_path)
     elif args.load: # load nn if one is given
-        neural_network2 = load_model(args.load[0])
+        random_forest_classifier = load_model(args.load[0])
     else: # create a new network
-        label_count, neural_network2 = train_new_network(args.files[0])
-        save_model(saved_path, neural_network2)
+        label_count, random_forest_classifier = train_new_network(args.files[0])
+        save_model(saved_path, random_forest_classifier)
 
-    y_test, y_predicted = predict(neural_network2, args.files[-1])
+    #print(random_forest_classifier.feature_importances_)
+    y_test, y_predicted = predict(random_forest_classifier, args.files[-1])
 
     print_stats(y_predicted, y_test, LABELS, OUTPUTS,
                 lambda i: list(CLASSIFICATIONS.keys())[i],
