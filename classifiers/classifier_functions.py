@@ -24,7 +24,7 @@ def load_model(filename):
     return loaded_model
 
 def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filename, label_count=None):
-    '''Print MLP Statistics on a test dataset
+    '''Print Classifier Statistics on a test dataset
 
         Parameters
         ----------
@@ -36,13 +36,13 @@ def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filen
         - label_count     count of train data for each label
     '''
     y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
-    print("MLP Correctly Classified:", accuracy_score(y_test, y_predicted, normalize=False) , "/" , len(y_predicted))
-    print("MLP Accuracy (" + os.path.basename(test_filename) + "):" + str(accuracy_score(y_test, y_predicted, normalize=True)))
+    print("Classifier Correctly Classified:", accuracy_score(y_test, y_predicted, normalize=False) , "/" , len(y_predicted))
+    print("Classifier Accuracy (" + os.path.basename(test_filename) + "):" + str(accuracy_score(y_test, y_predicted, normalize=True)))
     # For the metric below use 'micro' for the precision value: tp / (tp + fp)
     #  it seems to be the same as accuracy_score...
     # macro calculates metrics for each label, and finds their unweighted mean.
     #  This does not take label imbalance into account.
-    print("MLP Precision:", precision_score(y_test.argmax(1), y_predicted.argmax(1), average='macro'),'\n')
+    print("Classifier Precision:", precision_score(y_test.argmax(1), y_predicted.argmax(1), average='macro'),'\n')
 
     print(("# Flows" if label_count else "") + "             Type  Predicted / TOTAL")
     y_predicted_lst = y_predicted.tolist()
