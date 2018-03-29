@@ -76,8 +76,8 @@
 ## Label Meanings
 Idle and Active times only saved for flows with >500s
 
-# Results
-## Layer 1 (MLP - [40,16], 17 features):
+# Results  
+## Layer 1 (MLP - [40,16], 17 features):  
 - Malign:  
 Classifier Accuracy (dos-goldeneye-1min.csv):0.994240881396  
 Classifier Accuracy (dos-hulk-1min.csv):0.920725973293  
