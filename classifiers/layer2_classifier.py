@@ -8,23 +8,6 @@ from sklearn.neural_network import MLPClassifier
 #new
 from sklearn.ensemble import RandomForestRegressor
 
-# USAGE: layer2-classifier training_dataset.csv testing_dataset.csv
-#        layer2-classifier -l neural_network2.sav testing_dataset.csv
-
-# =====================
-#   ARGUMENT PARSING
-# =====================
-
-op = argparse.ArgumentParser( description="Classify MALIGN / BENIGN flows")
-op.add_argument('files', metavar='file', nargs='+', help='train and test data files, if "-l | --load" option is given then just give the test data')
-op.add_argument('-l', '--load', dest='load', nargs=1, metavar='NN_FILE', help="load neural network")
-args = op.parse_args()
-
-if not args.load and len(args.files) != 2:
-    op.print_usage()
-    print('train and test data must be given')
-    sys.exit(1)
-
 # =====================
 #     CONFIGURATION
 # =====================
@@ -43,65 +26,67 @@ PARAM_GRID = [{
 #       FUNCTIONS
 # =====================
 
-def parse_csvdataset(filename):
+def parse_csvdataset(filename, output_labels_known=False):
     x_in = []
     y_in = []
     with open(filename, 'r') as fd:
         for line in fd:
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])
-            if tmp[-1] in ATTACK_TYPES: tmp[-1] = "MALIGN"
-            try:
-                y_in.append(OUTPUTS[CLASSIFICATIONS[tmp[-1]]]) # choose result based on label
-            except IndexError:
-                print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
-                sys.exit(1)
-            except KeyError:
-                print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]))
-                sys.exit(1)
+            if output_labels_known:
+                if tmp[-1] in ATTACK_TYPES: tmp[-1] = "MALIGN"
+                try:
+                    y_in.append(OUTPUTS[CLASSIFICATIONS[tmp[-1]]]) # choose result based on label
+                except IndexError:
+                    print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
+                    sys.exit(1)
+                except KeyError:
+                    print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]))
+                    sys.exit(1)
     return x_in, y_in
 
 def train_new_network(filename):
     print('Reading Training Dataset... (' + filename + ')')
-    X_train, y_train = parse_csvdataset(filename)
+    X_train, y_train = parse_csvdataset(filename, True)
     label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
     random_forest_classifier = RandomForestRegressor(max_depth=3, random_state=0)
-    print("Training... (" + args.files[0] + ")")
+    print("Training... (" + filename + ")")
     random_forest_classifier.fit(X_train, y_train)
     return label_count, random_forest_classifier
 
-def predict(random_forest_classifier, filename):
-    print('Reading Test Dataset...')
-    X_test, y_test = parse_csvdataset(filename)
+def predict(random_forest_classifier, filename, testing=False):
+    if testing: print('Reading Test Dataset...')
+    X_test, y_test = parse_csvdataset(filename,testing)
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
     #X_test = scaler.transform(X_test)      # normalize
-    print("Predicting... (" + filename + ")\n")
+    if testing: print("Predicting... (" + filename + ")\n")
     y_predicted = random_forest_classifier.predict(X_test)
     return y_test, y_predicted
 
-if __name__ == '__main__':
+def layer2_classify(train_filename, test_filename, load=False, testing=False):
     digester = hashlib.md5()
-    with open(args.files[0], 'rb') as tf: digester.update(tf.read())
-    saved_path = 'saved_neural_networks/layer2/%s-%s' % (args.files[0].strip('/.csv').replace('/','-'), digester.hexdigest())
-    if path.isfile(saved_path) and not args.load: # default if it exists
-        random_forest_classifier = load_model(saved_path)
-    elif args.load: # load nn if one is given
-        random_forest_classifier = load_model(args.load[0])
+    with open(train_filename, 'rb') as tf: digester.update(tf.read())
+    saved_path = 'saved_neural_networks/layer2/%s-%s' % (train_filename.strip('/.csv').replace('/','-'), digester.hexdigest())
+    if path.isfile(saved_path) and not load: # default if it exists
+        random_forest_classifier = load_model(saved_path, testing)
     else: # create a new network
-        label_count, random_forest_classifier = train_new_network(args.files[0])
+        label_count, random_forest_classifier = train_new_network(train_filename)
         save_model(saved_path, random_forest_classifier)
 
     #print(random_forest_classifier.feature_importances_)
-    y_test, y_predicted = predict(random_forest_classifier, args.files[-1])
+    y_test, y_predicted = predict(random_forest_classifier, test_filename, testing)
 
-    print_stats(y_predicted, y_test, LABELS, OUTPUTS,
-                lambda i: list(CLASSIFICATIONS.keys())[i],
-                args.files[-1], None if not args.load else label_count)
+    if testing:
+        print_stats(y_predicted, y_test, LABELS, OUTPUTS,
+                    lambda i: list(CLASSIFICATIONS.keys())[i],
+                    test_filename, None if not load else label_count)
+
+    return y_predicted
 
 # train_test_split is not working as expected
     # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)

@@ -12,9 +12,9 @@ def save_model(filename, clfmodel):
     model_file.close()
     return
 
-def load_model(filename):
+def load_model(filename, testing=False):
     '''Load the model from disk'''
-    print("Loading neural-network...")
+    if testing: print("Loading neural-network...")
     if not os.path.isfile(filename):
         print("File %s does not exist." % filename)
         sys.exit(1)
