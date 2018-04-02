@@ -32,4 +32,5 @@ rm $TMP_FILE
 
 # dos
 cat ${directory}/benign-D*.csv > "${directory}/benign-DoS-Attack.csv"
-rm ${directory}/!(benign*.csv) ${directory}/benign-D!(oS-Attack.csv)
+cat ${directory}/benign-*Patator.csv > "${directory}/benign-Bruteforce.csv"
+rm ${directory}/!(benign*.csv) ${directory}/benign-*Patator.csv ${directory}/benign-D!(oS-Attack.csv)

@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+shopt -s extglob
 
 rm pcap/real/tekever_pcap_splitted/*
 editcap -c 100000 pcap/real/others/tekever-portscan-dump.pcap pcap/real/tekever_pcap_splitted/
@@ -17,10 +18,10 @@ for file in pcap/real/tekever_pcap_splitted/*; do
 	cd ../..
 done
 
-cat csv/train/extracted/*.csv > csv/train/extracted/tekever-portscan-train.csv
-rm csv/train/extracted/portscan*.csv
+python scripts/compact_flows.py csv/train/extracted/!(tekever-portscan-train.csv) csv/train/extracted/tekever-portscan-train.csv -f "scripts/features/all.txt"
+rm csv/train/extracted/!(tekever-portscan-train.csv)
 
-echo "$(tail -n +2 csv/train/extracted/tekever-portscan-train.csv)" > csv/train/extracted/tekever-portscan-train.csv
+cp csv/train/extracted/tekever-portscan-train.csv csv/train/allfeatures/layer2/PortScan.csv
 python scripts/compact_flows.py csv/base/cicfl_used_format/*.csv /tmp/compacted-benign --benign -f "scripts/features/all.txt"
 
 shuf /tmp/compacted-benign -n$(wc -l < csv/train/allfeatures/layer2/PortScan.csv) > $(echo csv/train/allfeatures/layer2/PortScan.csv | sed 's@\(.*\)\/\(.*\)@\1/benign-\2@')

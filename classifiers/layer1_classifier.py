@@ -12,10 +12,10 @@ from sklearn.neural_network import MLPClassifier
 # =====================
 
 # Attack Mapping for output encoding, DoS-Attack is used when refering to all DoS type attacks. DDoS value is 0 for easier output
-LABELS = 4 # 4, 7, 11
-ATTACK_KEYS = ["DoS-Attack", "PortScan", "FTP-Patator", "SSH-Patator", "Bot", "Infiltration", "Heartbleed", "DoS Hulk", "DoS GoldenEye", "DoS slowloris", "DoS Slowhttptest", "DDoS"]
-ATTACK_INDEX = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0]
-ATTACKS = dict(zip(ATTACK_KEYS, ATTACK_INDEX[:7] + (ATTACK_INDEX[-5:] if LABELS > 7 else [0] * 5)))
+LABELS = 3
+ATTACK_KEYS = ["DoS-Attack", "PortScan", "Bruteforce"]
+ATTACK_INDEX = [0, 1, 2]
+ATTACKS = dict(zip(ATTACK_KEYS,ATTACK_INDEX))
 OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
 PARAM_GRID = [{
     'activation' : ['identity', 'logistic', 'tanh', 'relu'],
@@ -38,6 +38,8 @@ def parse_csvdataset(filename, output_labels_known=False):
             if output_labels_known:
                 try:
                     if tmp[-1]=="BENIGN": tmp[-1]="DoS-Attack" # in case we're testing benign and in test mode, we need to assign a known label
+                    if tmp[-1]=="FTP-Patator" or tmp[-1]=="SSH-Patator": tmp[-1]="Bruteforce"
+                    if tmp[-1].find("DoS")!=-1: tmp[-1]="DoS-Attack"
                     y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
                 except IndexError:
                     print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
@@ -85,7 +87,7 @@ def layer1_classify(train_filename, test_filename, load=False, testing=False):
 
     if testing:
         print_stats(y_predicted, y_test, LABELS, OUTPUTS,
-                    lambda i: 'DDoS' if LABELS == 11 and i == 0 else ATTACK_KEYS[i],
+                    lambda i: ATTACK_KEYS[i],
                     test_filename, None if not load else label_count)
 
     return y_predicted

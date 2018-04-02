@@ -8,22 +8,19 @@ import layer2_classifier
 # Layer 1
 print("Layer 1: 'Attack-Profiling'")
 print("Layer 1 predicting...")
-y1_predicted = layer1_classifier.layer1_classify("csv/train/17features/layer1/trainingNN1.csv",sys.argv[1],testing=False)
+y1_predicted = layer1_classifier.layer1_classify("csv/train/17features/layer1/trainingNN1.csv",sys.argv[1],testing=True)
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
 
 dos=[]
 pscan=[]
 ftp=[]
-ssh=[]
 for i,prediction in enumerate(y1_predicted):
 	if np.argmax(prediction)==0: #DoS
 		dos.append(i)
 	elif np.argmax(prediction)==1: #PortScan
 		pscan.append(i)
-	elif np.argmax(prediction)==2: #FTP-Patator
+	elif np.argmax(prediction)==2: #Bruteforce
 		ftp.append(i)
-	elif np.argmax(prediction)==3: #SSH-Patator
-		ssh.append(i)
 	else:
 		print("Error.")
 
@@ -38,11 +35,9 @@ fd.close()
 dos = set(dos)
 pscan = set(pscan)
 ftp = set(ftp)
-ssh = set(ssh)
 dos_of = open("/root/Desktop/sandbox/dos.csv","w")
 pscan_of = open("/root/Desktop/sandbox/pscan.csv","w")
-ftp_of = open("/root/Desktop/sandbox/ftp.csv","w")
-ssh_of = open("/root/Desktop/sandbox/ssh.csv","w")
+ftp_of = open("/root/Desktop/sandbox/bruteforce.csv","w")
 
 print("Selecting layer1 selected flows...")
 for i,elem in enumerate(content):
@@ -52,40 +47,30 @@ for i,elem in enumerate(content):
 		pscan_of.write(elem + "\n")
 	elif i in ftp:
 		ftp_of.write(elem + "\n")
-	elif i in ssh:
-		ssh_of.write(elem + "\n")
 dos_of.close()
 pscan_of.close()
 ftp_of.close()
-ssh_of.close()
 
 benign=[]
 malign=[]
 print("Layer 2 predicting...")
 if len(dos)!=0:
-	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-DoS-Attack.csv","/root/Desktop/sandbox/dos.csv",testing=False)
+	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-DoS-Attack.csv","/root/Desktop/sandbox/dos.csv",testing=True)
 	for prediction in y2_dos_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(pscan)!=0:
-	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-PortScan.csv","/root/Desktop/sandbox/pscan.csv",testing=False)
+	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-PortScan.csv","/root/Desktop/sandbox/pscan.csv",testing=True)
 	for prediction in y2_pscan_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(ftp)!=0:
-	y2_ftp_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-FTP-Patator.csv","/root/Desktop/sandbox/ftp.csv",testing=False)
+	y2_ftp_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-Bruteforce.csv","/root/Desktop/sandbox/bruteforce.csv",testing=True)
 	for prediction in y2_ftp_predicted:
-		if np.argmax(prediction)==0: #Benign
-			benign.append(1)
-		elif np.argmax(prediction)==1: #Malign
-			malign.append(1)
-if len(ssh)!=0:
-	y2_ssh_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-SSH-Patator.csv","/root/Desktop/sandbox/ssh.csv",testing=False)
-	for prediction in y2_ssh_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
