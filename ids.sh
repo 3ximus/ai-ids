@@ -8,7 +8,7 @@ csv_filename=${pcap_filename%.*}.csv
 #dataset conversion
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
 cd dist/bin
-./CICFlowMeter "$1" ../../csv/test/extracted/
+./CICFlowMeter "$1" ../../csv/test/extracted/ &>/dev/null
 cd ../..
 
 [[ -d "csv/test/allfeatures/" ]] || mkdir "csv/test/allfeatures/"
