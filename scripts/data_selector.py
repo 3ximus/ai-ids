@@ -18,7 +18,7 @@ if not len(args.files) >= 2:
 
 # read settings
 with open(path.dirname(sys.argv[0])+'/train_data.config', 'r') as conf:
-    conf_lines = [[i.strip() for i in line.rsplit(' ', 1)] for line in conf.read().splitlines()]
+    conf_lines = [[i.strip() for i in line.rsplit(' ', 1)] for line in conf.read().splitlines() if not line.startswith('#')]
 
 # open output files
 of_names = ['%s/%s.csv' % (args.files[-1], line[0].replace(' ','-')) for line in conf_lines]

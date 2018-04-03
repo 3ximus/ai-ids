@@ -11,13 +11,14 @@ directory="csv/train/${1}features/layer2"
 find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
 
 echo "Selecting Malign flows..."
-python scripts/data_selector.py csv/base/cicfl_used_format/*.csv "$directory" -i
+python scripts/data_selector.py csv/base/cicfl_used_format/*.csv "$directory"
 echo "Compacting Malign flows..."
 python scripts/compact_flows.py ${directory}/*.csv "${directory}" -f "scripts/features/${1}.txt" -s ".tmp"
 for f in ${directory}/*.tmp; do
 	mv ${f} ${f%.*}.csv;
 done
 
+cp csv/base/tekever/tekever-portscan-train.csv ${directory}/PortScan.csv
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
