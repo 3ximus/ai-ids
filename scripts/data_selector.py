@@ -8,7 +8,6 @@ op = argparse.ArgumentParser(description="Setup train or test data with fixed am
 op.add_argument('files', metavar='file', nargs='+', help='input files. Last file is the output directory')
 op.add_argument('-i', '--ignore-counts', action='store_true', help="ignore count of tests from 'train_data.config' file and dump all the data", dest='ignore_count')
 op.add_argument('-r', '--random', action='store_true', help="random samples", dest='random')
-op.add_argument('-b', '--benign', action='store_true', help="also extract benign", dest='random')
 args = op.parse_args()
 
 if not len(args.files) >= 2:

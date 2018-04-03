@@ -9,18 +9,16 @@ csv_filename=${pcap_filename%.*}.csv
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
 OUT=$PWD/csv/test/extracted/
 cd dist/bin
-./CICFlowMeter "$1" $OUT
+./CICFlowMeter "$1" $OUT &>/dev/null
 cd ../..
 
 [[ -d "csv/test/allfeatures/" ]] || mkdir "csv/test/allfeatures/"
 [[ -d "csv/test/17features/" ]] || mkdir "csv/test/17features/"
 
 if [ "$2" == "m" ] || [ "$2" == "u" ] ; then
-	echo "WTF1"
 	python scripts/compact_flows.py "csv/test/extracted/$csv_filename" "csv/test/allfeatures/" -f "scripts/features/all.txt"
 	python scripts/compact_flows.py "csv/test/extracted/$csv_filename" "csv/test/17features/" -f "scripts/features/17.txt"
 elif [ "$2" == "b" ] ; then
-	echo "WTF2"
 	python scripts/compact_flows.py "csv/test/extracted/$csv_filename" "csv/test/allfeatures/" -f "scripts/features/all.txt" --benign
 	python scripts/compact_flows.py "csv/test/extracted/$csv_filename" "csv/test/17features/" -f "scripts/features/17.txt" --benign
 else
