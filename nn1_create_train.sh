@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
-# USAGE: nn1_create_train.sh 17
-if [ -z "$1" ] ; then
-	echo "Number of features missing" 1>&2 && exit 1
-fi
+# USAGE: nn1_create_train.sh [N-FEATURES]
 
-[[ -d "csv/train/${1}features/layer1/individual/" ]] || mkdir -p "csv/train/${1}features/layer1/individual/"
-python scripts/data_selector.py csv/base/cicfl_used_format/*.csv "csv/train/${1}features/layer1/individual/" -r
-python scripts/compact_flows.py csv/train/${1}features/layer1/individual/*.csv "csv/train/${1}features/layer1/trainingNN1.csv" -f "scripts/features/${1}.txt"
+NN1_TRAIN_DIR="csv/train/layer1/"
+FEATURES_FILE="scripts/features/${1:-17}.txt"
+
+[[ -d "${NN1_TRAIN_DIR}/individual/" ]] || mkdir -p "${NN1_TRAIN_DIR}/individual/"
+python scripts/data_selector.py csv/base/cicfl_used_format/*.csv "${NN1_TRAIN_DIR}/individual/" -r
+python scripts/compact_flows.py ${NN1_TRAIN_DIR}/individual/*.csv "${NN1_TRAIN_DIR}/trainingNN1.csv" -f "$FEATURES_FILE"
+rm -r "${NN1_TRAIN_DIR}/individual/"
