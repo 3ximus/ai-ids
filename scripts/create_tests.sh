@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 # args[1:-1]: pcap files, arg[-1]: n_features
-
-cd ..
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
 for file in ${@:1:${#}-1}; do
 	cd dist/bin

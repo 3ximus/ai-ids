@@ -1,16 +1,13 @@
 #!/bin/bash
 set -e
 shopt -s extglob
-# USAGE: create_nn2train.sh [N-FEATURES]
-if [ -z "$1" ] ; then
-	echo "Number of features missing" 1>&2 && exit 1
-fi
 
 directory="csv/train/layer2"
 [[ -d  "$directory" ]] || mkdir -p "$directory"
 find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
 
 echo "Compacting Malign flows..."	# obtained from static dirs 'csv/train/extracted/*'
+
 #bruteforce
 cp csv/train/extracted/bruteforce/*.csv "$directory"
 python scripts/compact_flows.py ${directory}/tekever-*patator.csv "${directory}" -f "scripts/features/all.txt" -s ".tmp"	# sendo agora compactado
@@ -24,13 +21,13 @@ rm $directory/tekever-*patator.csv
 cp csv/train/extracted/pscan/*.csv "$directory"			# ja compactado (all features) usando todos os portscan cortados e extraídos anteriormente
 
 #dos
-cp csv/train/extracted/dos/*.csv "$directory"			# ja compactado (all features) usando todos os portscan cortados e extraídos anteriormente
+cp csv/train/extracted/dos/*.csv "$directory"
 
 cp csv/base/tekever/tekever-portscan-train.csv ${directory}/PortScan.csv
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
-#python scripts/compact_flows.py csv/base/cicfl_used_format/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
+#python scripts/compact_flows.py csv/train/extracted/benign/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
 echo "Shuffling..."
 for file in ${directory}/*.csv; do
 	echo "$file"

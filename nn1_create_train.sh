@@ -1,9 +1,8 @@
 #!/bin/bash
 set -e
-# USAGE: nn1_create_train.sh [N-FEATURES]
 
 NN1_TRAIN_DIR="csv/train/layer1/"
-FEATURES_FILE="scripts/features/${1:-17}.txt"
+FEATURES_FILE="scripts/features/17.txt"
 
 [[ -d "${NN1_TRAIN_DIR}/individual/" ]] || mkdir -p "${NN1_TRAIN_DIR}/individual/"
 python scripts/data_selector.py csv/base/cicfl_used_format/*.csv "${NN1_TRAIN_DIR}/individual/" -r
