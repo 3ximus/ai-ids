@@ -38,7 +38,7 @@ def parse_csvdataset(filename, output_labels_known=False):
             if output_labels_known:
                 try:
                     if tmp[-1]=="BENIGN": tmp[-1]="DoS-Attack" # in case we're testing benign and in test mode, we need to assign a known label
-                    if tmp[-1]=="FTP-Patator" or tmp[-1]=="SSH-Patator": tmp[-1]="Bruteforce"
+                    if tmp[-1]=="FTP-Patator" or tmp[-1]=="SSH-Patator" or tmp[-1]=="TELNET-Patator": tmp[-1]="Bruteforce"
                     if tmp[-1].find("DoS")!=-1: tmp[-1]="DoS-Attack"
                     y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
                 except IndexError:

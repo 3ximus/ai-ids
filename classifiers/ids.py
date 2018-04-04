@@ -13,14 +13,14 @@ y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(
 
 dos=[]
 pscan=[]
-ftp=[]
+bforce=[]
 for i,prediction in enumerate(y1_predicted):
 	if np.argmax(prediction)==0: #DoS
 		dos.append(i)
 	elif np.argmax(prediction)==1: #PortScan
 		pscan.append(i)
 	elif np.argmax(prediction)==2: #Bruteforce
-		ftp.append(i)
+		bforce.append(i)
 	else:
 		print("Error.")
 
@@ -34,10 +34,10 @@ fd.close()
 
 dos = set(dos)
 pscan = set(pscan)
-ftp = set(ftp)
+bforce = set(bforce)
 dos_of = open("/root/Desktop/sandbox/dos.csv","w")
 pscan_of = open("/root/Desktop/sandbox/pscan.csv","w")
-ftp_of = open("/root/Desktop/sandbox/bruteforce.csv","w")
+bforce_of = open("/root/Desktop/sandbox/bruteforce.csv","w")
 
 print("Selecting layer1 selected flows...")
 for i,elem in enumerate(content):
@@ -45,32 +45,32 @@ for i,elem in enumerate(content):
 		dos_of.write(elem + "\n")
 	elif i in pscan:
 		pscan_of.write(elem + "\n")
-	elif i in ftp:
-		ftp_of.write(elem + "\n")
+	elif i in bforce:
+		bforce_of.write(elem + "\n")
 dos_of.close()
 pscan_of.close()
-ftp_of.close()
+bforce_of.close()
 
 benign=[]
 malign=[]
 print("Layer 2 predicting...")
 if len(dos)!=0:
-	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-DoS-Attack.csv","/root/Desktop/sandbox/dos.csv",testing=True)
+	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-dos.csv","/root/Desktop/sandbox/dos.csv",testing=True)
 	for prediction in y2_dos_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(pscan)!=0:
-	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-PortScan.csv","/root/Desktop/sandbox/pscan.csv",testing=True)
+	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-tekever-portscan.csv","/root/Desktop/sandbox/pscan.csv",testing=True)
 	for prediction in y2_pscan_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
-if len(ftp)!=0:
-	y2_ftp_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-Bruteforce.csv","/root/Desktop/sandbox/bruteforce.csv",testing=True)
-	for prediction in y2_ftp_predicted:
+if len(bforce)!=0:
+	y2_bforce_predicted = layer2_classifier.layer2_classify("csv/train/allfeatures/layer2/benign-tekever-bruteforce.csv","/root/Desktop/sandbox/bruteforce.csv",testing=True)
+	for prediction in y2_bforce_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign

@@ -13,7 +13,7 @@ from sklearn.ensemble import RandomForestRegressor
 # =====================
 
 LABELS = 2
-ATTACK_TYPES = ("DoS-Attack", "PortScan", "FTP-Patator", "SSH-Patator", "Bot", "Infiltration", "Heartbleed", "DoS Hulk", "DoS GoldenEye", "DoS slowloris", "DoS Slowhttptest", "DDoS")
+ATTACK_TYPES = ("DoS-Attack", "PortScan", "FTP-Patator", "SSH-Patator", "TELNET-Patator","Bot", "Infiltration", "Heartbleed", "DoS Hulk", "DoS GoldenEye", "DoS slowloris", "DoS Slowhttptest", "DDoS")
 CLASSIFICATIONS = {"BENIGN": 0, "MALIGN": 1}
 OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
 PARAM_GRID = [{
