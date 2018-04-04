@@ -26,6 +26,7 @@ cp csv/train/extracted/pscan/*.csv "$directory"			# ja compactado (all features)
 #dos
 cp csv/train/extracted/dos/*.csv "$directory"			# ja compactado (all features) usando todos os portscan cortados e extraídos anteriormente
 
+cp csv/base/tekever/tekever-portscan-train.csv ${directory}/PortScan.csv
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
