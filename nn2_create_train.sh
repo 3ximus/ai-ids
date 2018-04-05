@@ -19,7 +19,8 @@ cat $directory/tekever-dos-*.csv > $directory/tekever-dos.csv
 rm $directory/tekever-dos-*.csv
 
 #portscan
-cp csv/train/extracted/pscan/*.csv "$directory"			# ja compactado (all features) usando todos os portscan cortados e extraídos anteriormente
+python scripts/compact_flows.py csv/train/extracted/pscan/tekever-portscan.csv "${directory}" -f "scripts/features/all.txt"
+#cp csv/train/extracted/pscan/tekever-portscan-2.csv "${directory}/tekever-portscan.csv"
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
