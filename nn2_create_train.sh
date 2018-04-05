@@ -9,30 +9,32 @@ find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
 echo "Compacting Malign flows..."	# obtained from static dirs 'csv/train/extracted/*'
 
 #bruteforce
-cp csv/train/extracted/bruteforce/*.csv "$directory"
-python scripts/compact_flows.py ${directory}/tekever-*patator.csv "${directory}" -f "scripts/features/all.txt" -s ".tmp"	# sendo agora compactado
-for f in ${directory}/*.tmp; do
-	mv ${f} ${f%.*}.csv;
-done
-cat $directory/tekever-*patator.csv >> $directory/tekever-bruteforce.csv
+python scripts/compact_flows.py csv/train/extracted/bruteforce/*.csv "${directory}" -f "scripts/features/all.txt"
+cat $directory/tekever-*patator.csv > $directory/tekever-bruteforce.csv
 rm $directory/tekever-*patator.csv
+
+#dos
+python scripts/compact_flows.py csv/train/extracted/dos/*.csv "${directory}" -f "scripts/features/all.txt"
+cat $directory/tekever-dos-*.csv > $directory/tekever-dos.csv
+rm $directory/tekever-dos-*.csv
 
 #portscan
 cp csv/train/extracted/pscan/*.csv "$directory"			# ja compactado (all features) usando todos os portscan cortados e extraídos anteriormente
 
-#dos
-cp csv/train/extracted/dos/*.csv "$directory"
-
-cp csv/base/tekever/tekever-portscan-train.csv ${directory}/PortScan.csv
-
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
-#python scripts/compact_flows.py csv/train/extracted/benign/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
+python scripts/compact_flows.py csv/train/extracted/benign/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
+
 echo "Shuffling..."
 for file in ${directory}/*.csv; do
 	echo "$file"
-	shuf $TMP_FILE -n$(wc -l < "${file}") > $(echo "$file" | sed 's@\(.*\)\/\(.*\)@\1/benign-\2@')
-	cat "$file" >> $(echo "$file" | sed 's@\(.*\)\/\(.*\)@\1/benign-\2@')
+	if [ $(wc -l < "${file}") -gt $(wc -l < "${TMP_FILE}") ];then
+		shuf "$file" -n$(wc -l < "$TMP_FILE") > $(echo "$file" | sed 's@\(.*\)\/\(.*\)@\1/benign-\2@')
+		cat "$TMP_FILE" >> $(echo "$file" | sed 's@\(.*\)\/\(.*\)@\1/benign-\2@')
+	else
+		shuf "$TMP_FILE" -n$(wc -l < "${file}") > $(echo "$file" | sed 's@\(.*\)\/\(.*\)@\1/benign-\2@')
+		cat "$file" >> $(echo "$file" | sed 's@\(.*\)\/\(.*\)@\1/benign-\2@')
+	fi
 done
 
 #rm $TMP_FILE

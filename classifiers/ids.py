@@ -1,5 +1,7 @@
 from __future__ import print_function
 import layer1_classifier
+import sys
+import numpy as np
 import layer2_classifier
 
 # Usage: ids.py <17 features csv to test> <same all features csv to test>
@@ -55,7 +57,7 @@ benign=[]
 malign=[]
 print("Layer 2 predicting...")
 if len(dos)!=0:
-	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-dos.csv","/root/Desktop/sandbox/dos.csv",testing=True)
+	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-dos.csv","/root/Desktop/sandbox/dos.csv",testing=True)
 	for prediction in y2_dos_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)

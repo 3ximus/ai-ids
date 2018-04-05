@@ -11,7 +11,6 @@ cd dist/bin
 ./CICFlowMeter "$1" ../../csv/test/extracted/
 cd ../..
 
-exit 1
 [[ -d "csv/test/allfeatures/" ]] || mkdir "csv/test/allfeatures/"
 [[ -d "csv/test/17features/" ]] || mkdir "csv/test/17features/"
 
