@@ -24,7 +24,7 @@ python scripts/compact_flows.py csv/train/extracted/pscan/tekever-portscan.csv "
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
-python scripts/compact_flows.py csv/train/extracted/benign/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
+python scripts/compact_flows.py csv/base/cicfl_used_format/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
 
 echo "Shuffling..."
 for file in ${directory}/*.csv; do
@@ -39,7 +39,4 @@ for file in ${directory}/*.csv; do
 done
 
 #rm $TMP_FILE
-
-# dos
-#cat ${directory}/benign-D*.csv > "${directory}/benign-DoS-Attack.csv"
-rm ${directory}/!(benign*.csv) #${directory}/benign-*Patator.csv ${directory}/benign-D!(oS-Attack.csv)
+rm ${directory}/!(benign*.csv)

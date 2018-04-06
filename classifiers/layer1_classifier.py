@@ -5,7 +5,9 @@ import sys, hashlib
 from os import path
 from classifier_functions import save_model, load_model, print_stats
 from sklearn.neural_network import MLPClassifier
-
+from sklearn import preprocessing
+#new
+from sklearn.ensemble import RandomForestRegressor
 
 # =====================
 #     CONFIGURATION
@@ -22,7 +24,7 @@ PARAM_GRID = [{
     'solver' : ['lbfgs', 'sgd', 'adam'],
     'hidden_layer_sizes': [
     (16,),(32,),(64,),(128,)]}]
-
+scaler=0
 
 # =====================
 #       FUNCTIONS
@@ -56,9 +58,11 @@ def train_new_network(filename):
     label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
-    #scaler = preprocessing.StandardScaler().fit(X_train)
-    #X_train = scaler.transform(X_train)    # normalize
+    scaler = preprocessing.StandardScaler().fit(X_train)
+    X_train = scaler.transform(X_train)    # normalize
+    save_model("saved_neural_networks/layer1/scalerX",scaler)
     neural_network1 = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(40,16), random_state=1)
+    #neural_network1=RandomForestRegressor(max_depth=3, random_state=0)
     print("Training... (" + filename + ")")
     neural_network1.fit(X_train, y_train)
     return label_count, neural_network1
@@ -68,7 +72,8 @@ def predict(neural_network1, filename, testing=False):
     X_test, y_test = parse_csvdataset(filename,testing)
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
-    #X_test = scaler.transform(X_test)      # normalize
+    scaler = load_model("saved_neural_networks/layer1/scalerX", testing)
+    X_test = scaler.transform(X_test)      # normalize
     if testing: print("Predicting... (" + filename + ")\n")
     y_predicted = neural_network1.predict_proba(X_test)
     return y_test, y_predicted

@@ -4,8 +4,7 @@ import sys
 import numpy as np
 import layer2_classifier
 
-# Usage: ids.py <17 features csv to test> <same all features csv to test>
-# Future Usage: ids.py <pcap file>
+# Usage: ids.py <all features csv to test>
 
 # Layer 1
 print("Layer 1: 'Attack-Profiling'")
@@ -29,7 +28,7 @@ for i,prediction in enumerate(y1_predicted):
 # Layer 2
 print("Layer 2: 'Flow Classification'")
 
-fd = open(sys.argv[2],"r")
+fd = open(sys.argv[1],"r")
 content = fd.readlines()
 content = [x.strip('\n') for x in content]
 fd.close()

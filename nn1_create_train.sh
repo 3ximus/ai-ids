@@ -2,7 +2,7 @@
 set -e
 
 NN1_TRAIN_DIR="csv/train/layer1/"
-FEATURES_FILE="scripts/features/17.txt"
+FEATURES_FILE="scripts/features/all.txt"
 
 [[ -d "${NN1_TRAIN_DIR}/individual/" ]] || mkdir -p "${NN1_TRAIN_DIR}/individual/"
 
