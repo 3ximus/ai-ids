@@ -1,5 +1,5 @@
 from __future__ import print_function
-import os, pickle, sys
+import os, pickle
 from sklearn.metrics import accuracy_score, precision_score
 
 def save_model(filename, clfmodel):
@@ -15,7 +15,7 @@ def load_model(filename):
     '''Load the model from disk'''
     if not os.path.isfile(filename):
         print("File %s does not exist." % filename)
-        sys.exit(1)
+        exit()
     model_file = open(filename, 'rb')
     loaded_model = pickle.load(model_file)
     model_file.close()

@@ -1,15 +1,40 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import sys, os
+import sys, os, argparse
 import numpy as np
-import layer1_classifier, layer2_classifier
+import layer1, layer2
 
-# Usage: ids.py <all features csv to test>
+# =====================
+#       OPTIONS
+# =====================
+
+op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
+op.add_argument('files', metavar='file', nargs='+', help='csv file with all features to test')
+op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
+op.add_argument('-v', '--verbose', action='store_true', help="verbose output", dest='verbose')
+op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default=os.path.dirname(__file__) + '/options.cfg')
+args = op.parse_args()
+
+# =====================
+#     CONFIGURATION
+# =====================
+
+# TODO CHANGE THIS HARDCODING
+L1_TRAIN_FILE = "csv/train/layer1/trainingNN1.csv"
+L2_TRAIN_FILE_DOS = "csv/train/layer2/benign-tekever-dos.csv"
+L2_TRAIN_FILE_PORTSCAN = "csv/train/layer2/benign-tekever-portscan.csv"
+L2_TRAIN_FILE_BRUTEFORCE = "csv/train/layer2/benign-tekever-bruteforce.csv"
+
+# setup temp directory
+TMP_DIR = '/tmp/ids.py.tmp'
+if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
+TMP_L1_OUTPUT_DOS = TMP_DIR +"/dos.csv"
+TMP_L1_OUTPUT_PORTSCAN = TMP_DIR +"/portscan.csv"
+TMP_L1_OUTPUT_BRUTEFORCE = TMP_DIR +"/bruteforce.csv"
 
 # Layer 1
 print("Layer 1: 'Attack-Profiling'")
-print("Layer 1 predicting...")
-y1_predicted = layer1_classifier.layer1_classify("csv/train/layer1/trainingNN1.csv",sys.argv[1],testing=True)
+y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], disable_load=args.disable_load, verbose=args.verbose) # FIXME DONT USE argv since it expect a bool!!
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
 
 dos=[]
@@ -28,21 +53,17 @@ for i,prediction in enumerate(y1_predicted):
 # Layer 2
 print("Layer 2: 'Flow Classification'")
 
-fd = open(sys.argv[1],"r")
+fd = open(args.files[0],"r")
 content = fd.readlines()
 content = [x.strip('\n') for x in content]
 fd.close()
 
-# setup temp directory
-TMP_DIR = '/tmp/ids.py.tmp'
-if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
-
 dos = set(dos)
 pscan = set(pscan)
 bforce = set(bforce)
-dos_of = open(TMP_DIR +"/dos.csv","w")
-pscan_of = open(TMP_DIR +"/portscan.csv","w")
-bforce_of = open(TMP_DIR +"/bruteforce.csv","w")
+dos_of = open(TMP_L1_OUTPUT_DOS,"w")
+pscan_of = open(TMP_L1_OUTPUT_PORTSCAN,"w")
+bforce_of = open(TMP_L1_OUTPUT_BRUTEFORCE,"w")
 
 print("Selecting layer1 selected flows...")
 for i,elem in enumerate(content):
@@ -58,23 +79,22 @@ bforce_of.close()
 
 benign=[]
 malign=[]
-print("Layer 2 predicting...")
 if len(dos)!=0:
-	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-dos.csv",TMP_DIR +"/dos.csv",testing=True)
+	y2_dos_predicted = layer2.classify(L2_TRAIN_FILE_DOS, TMP_L1_OUTPUT_DOS, disable_load=args.disable_load, verbose=args.verbose)
 	for prediction in y2_dos_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(pscan)!=0:
-	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-portscan.csv",TMP_DIR +"/portscan.csv",testing=True)
+	y2_pscan_predicted = layer2.classify(L2_TRAIN_FILE_PORTSCAN, TMP_L1_OUTPUT_PORTSCAN, disable_load=args.disable_load, verbose=args.verbose)
 	for prediction in y2_pscan_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(bforce)!=0:
-	y2_bforce_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-bruteforce.csv",TMP_DIR +"/bruteforce.csv",testing=True)
+	y2_bforce_predicted = layer2.classify(L2_TRAIN_FILE_BRUTEFORCE, TMP_L1_OUTPUT_BRUTEFORCE, disable_load=args.disable_load, verbose=args.verbose)
 	for prediction in y2_bforce_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
