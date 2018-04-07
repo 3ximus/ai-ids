@@ -4,21 +4,27 @@ import numpy as np
 import sys, argparse, hashlib
 from os import path
 from classifier_functions import save_model, load_model, print_stats
-from sklearn.ensemble import RandomForestRegressor
+try: import configparser
+except ImportError: import ConfigParser as configparser # for python2
 
 # =====================
 #     CONFIGURATION
 # =====================
 
-LABELS = 2
-ATTACK_TYPES = ("DoS-Attack", "PortScan", "FTP-Patator", "SSH-Patator", "TELNET-Patator","Bot", "Infiltration", "Heartbleed", "DoS Hulk", "DoS GoldenEye", "DoS slowloris", "DoS Slowhttptest", "DDoS")
-CLASSIFICATIONS = {"BENIGN": 0, "MALIGN": 1}
+# load config file settings
+conf = configparser.ConfigParser(allow_no_value=True)
+conf.optionxform=str
+conf.read(path.dirname(__file__) + '/options.cfg')
+
+# set options
+LABELS = conf.getint('l2', 'labels')
+CLASSIFICATIONS = dict(zip(conf.options('l2-labels'), range(len(conf.options('l2-labels')))))
 OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
-PARAM_GRID = [{
-    'activation' : ['identity', 'logistic', 'tanh', 'relu'],
-    'solver' : ['lbfgs', 'sgd', 'adam'],
-    'hidden_layer_sizes': [
-    (16,),(32,),(64,),(128,)]}]
+ATTACK_TYPES = conf.options('l2-malign')
+
+# do necessary imports and load the module
+if conf.get('l2', 'classifier_module'): exec('import '+ conf.get('l2', 'classifier_module'))
+MODEL = eval(conf.get('l2', 'classifier'))
 
 # =====================
 #       FUNCTIONS
@@ -51,10 +57,9 @@ def train_new_network(filename):
     y_train = np.array(y_train, dtype='float64')
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
-    classifier = RandomForestRegressor(max_depth=3, random_state=0)
     print("Training... (" + filename + ")")
-    classifier.fit(X_train, y_train)
-    return label_count, classifier
+    MODEL.fit(X_train, y_train)
+    return label_count, MODEL
 
 def predict(classifier, filename, testing=False):
     if testing: print('Reading Test Dataset...')

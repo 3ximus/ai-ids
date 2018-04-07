@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import layer1_classifier
 import sys, os
 import numpy as np
-import layer2_classifier
+import layer1_classifier, layer2_classifier
 
 # Usage: ids.py <all features csv to test>
 
@@ -84,7 +83,7 @@ if len(bforce)!=0:
 
 benign_length = len(benign)
 malign_length = len(malign)
-print("\033[1;35m\n---------\nRESULTS |\n---------\033[0;0m")
+print("\033[35m\n -----------\n | RESULTS |\n -----------\033[0;0m")
 print("\033[1;32m#Flows classified as benign:\033[0;0m")
 print(benign_length)
 print("\033[1;31m#Flows classified as malign:\033[0;0m")

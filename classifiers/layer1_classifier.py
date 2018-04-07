@@ -4,24 +4,28 @@ import numpy as np
 import sys, hashlib
 from os import path
 from classifier_functions import save_model, load_model, print_stats
-from sklearn.neural_network import MLPClassifier
 from sklearn import preprocessing
+try: import configparser
+except ImportError: import ConfigParser as configparser # for python2
 
 # =====================
 #     CONFIGURATION
 # =====================
 
-# Attack Mapping for output encoding, DoS-Attack is used when refering to all DoS type attacks. DDoS value is 0 for easier output
-LABELS = 3
-ATTACK_KEYS = ["DoS-Attack", "PortScan", "Bruteforce"]
-ATTACK_INDEX = [0, 1, 2]
-ATTACKS = dict(zip(ATTACK_KEYS,ATTACK_INDEX))
+# load config file settings
+conf = configparser.ConfigParser(allow_no_value=True)
+conf.optionxform=str
+conf.read(path.dirname(__file__) + '/options.cfg')
+
+# set options
+LABELS = conf.getint('l1', 'labels')
+ATTACK_KEYS = conf.options('l1-labels')
+ATTACKS = dict(zip(ATTACK_KEYS, range(len(ATTACK_KEYS))))
 OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
-PARAM_GRID = [{
-    'activation' : ['identity', 'logistic', 'tanh', 'relu'],
-    'solver' : ['lbfgs', 'sgd', 'adam'],
-    'hidden_layer_sizes': [
-    (16,),(32,),(64,),(128,)]}]
+
+# do necessary imports and load the module
+if conf.get('l1', 'classifier_module'): exec('import '+ conf.get('l1', 'classifier_module'))
+MODEL = eval(conf.get('l1', 'classifier'))
 scaler=0
 
 # =====================
@@ -59,10 +63,9 @@ def train_new_network(filename):
     scaler = preprocessing.StandardScaler().fit(X_train)
     X_train = scaler.transform(X_train)    # normalize
     save_model("saved_neural_networks/layer1/scalerX",scaler)
-    classifier = MLPClassifier(activation='logistic', solver='adam', alpha=1e-5, hidden_layer_sizes=(40,16), random_state=1)
     print("Training... (" + filename + ")")
-    classifier.fit(X_train, y_train)
-    return label_count, classifier
+    MODEL.fit(X_train, y_train)
+    return label_count, MODEL
 
 def predict(classifier, filename, testing=False):
     if testing: print('Reading Test Dataset...')
