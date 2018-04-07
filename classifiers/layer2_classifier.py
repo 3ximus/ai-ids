@@ -22,9 +22,13 @@ CLASSIFICATIONS = dict(zip(conf.options('l2-labels'), range(len(conf.options('l2
 OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
 ATTACK_TYPES = conf.options('l2-malign')
 
-# do necessary imports and load the module
-if conf.get('l2', 'classifier_module'): exec('import '+ conf.get('l2', 'classifier_module'))
+# classifier setup
+if conf.has_option('l2', 'classifier_module'): exec('import '+ conf.get('l2', 'classifier_module')) # import classifier module
 MODEL = eval(conf.get('l2', 'classifier'))
+
+# scaler setup
+if conf.has_option('l2', 'scaler_module'): exec('import '+ conf.get('l2', 'scaler_module')) # import scaler module
+SCALER = eval(conf.get('l2', 'scaler')) if conf.has_option('l2', 'scaler') else None
 
 # =====================
 #       FUNCTIONS
@@ -55,8 +59,10 @@ def train_new_network(filename):
     label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
-    #scaler = preprocessing.StandardScaler().fit(X_train)
-    #X_train = scaler.transform(X_train)    # normalize
+    if SCALER:
+        scaler = SCALER.fit(X_train)
+        X_train = scaler.transform(X_train)    # normalize
+        save_model("saved_neural_networks/layer1/scalerX",scaler)
     print("Training... (" + filename + ")")
     MODEL.fit(X_train, y_train)
     return label_count, MODEL
