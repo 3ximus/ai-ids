@@ -30,10 +30,11 @@ if not path.isfile(args.features):
     print("File given does not exist. %s" % args.features)
     sys.exit(1)
 FEATURES_LIST = open(args.features, 'r').read().splitlines()
-KNOWN_LABELS = {"portscan": "PortScan", "ftp.?patator": "FTP-Patator", "ssh.?patator": "SSH-Patator", "telnet.?patator": "TELNET-Patator",
-                "bot": "Bot", "infiltration": "Infiltration", "heartbleed": "Heartbleed",
-                "dos.?hulk": "DoS Hulk", "dos.?goldeneye": "DoS GoldenEye", "dos.?slowloris": "DoS slowloris",
-                "dos.?slowhttptest": "DoS Slowhttptest", "ddos": "DDoS", "benign": "BENIGN"}
+KNOWN_LABELS = {"portscan": "portscan", "ftp.?(patator|bruteforce)": "ftpbruteforce", "ssh.?(patator|bruteforce)": "sshbruteforce",
+                "telnet.?(patator|bruteforce)": "telnetbruteforce", "bot": "bot", "infiltration": "infiltration",
+                "heartbleed": "heartbleed", "dos.?hulk": "doshulk", "dos.?goldeneye": "dosgoldeneye",
+                "dos.?slowloris": "dosslowloris", "dos.?slowhttptest": "dosslowhttptest", "ddos": "ddos",
+                "benign": "BENIGN"}
 
 if path.isdir(args.files[-1]): # directory output, process files separately
     of_names = [args.files[-1] + '/' + path.splitext(path.basename(in_file))[0] + args.suffix[0] for in_file in args.files[:-1]]
@@ -73,5 +74,3 @@ for i, ofr in enumerate(read_f):
     ofw.write(write_me)
     ofw.close() # close
 
-# DATASETS DISPONIBILIZADOS: 84 features + 1 feature (no caso do DDoS, 'External IP')
-# DATASETS A SER CRIADOS: 83 features, nao incluem em caso algum o atributo 'External IP'

@@ -16,11 +16,11 @@ dos=[]
 pscan=[]
 bforce=[]
 for i,prediction in enumerate(y1_predicted):
-	if np.argmax(prediction)==0: #DoS
+	if np.argmax(prediction)==0: #dos
 		dos.append(i)
-	elif np.argmax(prediction)==1: #PortScan
+	elif np.argmax(prediction)==1: #portscan
 		pscan.append(i)
-	elif np.argmax(prediction)==2: #Bruteforce
+	elif np.argmax(prediction)==2: #bruteforce
 		bforce.append(i)
 	else:
 		print("Error.")
@@ -41,7 +41,7 @@ dos = set(dos)
 pscan = set(pscan)
 bforce = set(bforce)
 dos_of = open(TMP_DIR +"/dos.csv","w")
-pscan_of = open(TMP_DIR +"/pscan.csv","w")
+pscan_of = open(TMP_DIR +"/portscan.csv","w")
 bforce_of = open(TMP_DIR +"/bruteforce.csv","w")
 
 print("Selecting layer1 selected flows...")
@@ -67,7 +67,7 @@ if len(dos)!=0:
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(pscan)!=0:
-	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-portscan.csv",TMP_DIR +"/pscan.csv",testing=True)
+	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-portscan.csv",TMP_DIR +"/portscan.csv",testing=True)
 	for prediction in y2_pscan_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)

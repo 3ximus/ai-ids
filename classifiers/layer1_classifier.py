@@ -23,10 +23,13 @@ ATTACK_KEYS = conf.options('l1-labels')
 ATTACKS = dict(zip(ATTACK_KEYS, range(len(ATTACK_KEYS))))
 OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
 
-# do necessary imports and load the module
-if conf.get('l1', 'classifier_module'): exec('import '+ conf.get('l1', 'classifier_module'))
+# classifier setup
+if conf.has_option('l1', 'classifier_module'): exec('import '+ conf.get('l1', 'classifier_module')) # import classifier module
 MODEL = eval(conf.get('l1', 'classifier'))
-scaler=0
+
+# scaler setup
+if conf.has_option('l1', 'scaler_module'): exec('import '+ conf.get('l1', 'scaler_module')) # import scaler module
+SCALER = eval(conf.get('l1', 'scaler')) if conf.has_option('l1', 'scaler') else None
 
 # =====================
 #       FUNCTIONS
@@ -41,9 +44,9 @@ def parse_csvdataset(filename, output_labels_known=False):
             x_in.append(tmp[1:-1])
             if output_labels_known:
                 try:
-                    if tmp[-1]=="BENIGN": tmp[-1]="DoS-Attack" # in case we're testing benign and in test mode, we need to assign a known label
-                    if tmp[-1]=="FTP-Patator" or tmp[-1]=="SSH-Patator" or tmp[-1]=="TELNET-Patator": tmp[-1]="Bruteforce"
-                    if tmp[-1].find("DoS")!=-1: tmp[-1]="DoS-Attack"
+                    if tmp[-1]=="BENIGN": tmp[-1]="dos" # in case we're testing benign and in test mode, we need to assign a known label
+                    if tmp[-1] in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): tmp[-1]="bruteforce"
+                    if tmp[-1].find("dos")!=-1: tmp[-1]="dos"
                     y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
                 except IndexError:
                     print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
@@ -60,9 +63,10 @@ def train_new_network(filename):
     label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
-    scaler = preprocessing.StandardScaler().fit(X_train)
-    X_train = scaler.transform(X_train)    # normalize
-    save_model("saved_neural_networks/layer1/scalerX",scaler)
+    if SCALER:
+        scaler = SCALER.fit(X_train)
+        X_train = scaler.transform(X_train)    # normalize
+        save_model("saved_neural_networks/layer1/scalerX",scaler)
     print("Training... (" + filename + ")")
     MODEL.fit(X_train, y_train)
     return label_count, MODEL
@@ -72,8 +76,9 @@ def predict(classifier, filename, testing=False):
     X_test, y_test = parse_csvdataset(filename,testing)
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
-    scaler = load_model("saved_neural_networks/layer1/scalerX", testing)
-    X_test = scaler.transform(X_test)      # normalize
+    if SCALER:
+        scaler = load_model("saved_neural_networks/layer1/scalerX", testing)
+        X_test = scaler.transform(X_test)      # normalize
     if testing: print("Predicting... (" + filename + ")\n")
     y_predicted = classifier.predict_proba(X_test)
     return y_test, y_predicted
