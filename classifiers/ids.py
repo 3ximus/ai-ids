@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 from __future__ import print_function
 import layer1_classifier
-import sys
+import sys, os
 import numpy as np
 import layer2_classifier
 
@@ -33,12 +34,16 @@ content = fd.readlines()
 content = [x.strip('\n') for x in content]
 fd.close()
 
+# setup temp directory
+TMP_DIR = '/tmp/ids.py.tmp'
+if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
+
 dos = set(dos)
 pscan = set(pscan)
 bforce = set(bforce)
-dos_of = open("/root/Desktop/sandbox/dos.csv","w")
-pscan_of = open("/root/Desktop/sandbox/pscan.csv","w")
-bforce_of = open("/root/Desktop/sandbox/bruteforce.csv","w")
+dos_of = open(TMP_DIR +"/dos.csv","w")
+pscan_of = open(TMP_DIR +"/pscan.csv","w")
+bforce_of = open(TMP_DIR +"/bruteforce.csv","w")
 
 print("Selecting layer1 selected flows...")
 for i,elem in enumerate(content):
@@ -56,21 +61,21 @@ benign=[]
 malign=[]
 print("Layer 2 predicting...")
 if len(dos)!=0:
-	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-dos.csv","/root/Desktop/sandbox/dos.csv",testing=True)
+	y2_dos_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-dos.csv",TMP_DIR +"/dos.csv",testing=True)
 	for prediction in y2_dos_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(pscan)!=0:
-	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-portscan.csv","/root/Desktop/sandbox/pscan.csv",testing=True)
+	y2_pscan_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-portscan.csv",TMP_DIR +"/pscan.csv",testing=True)
 	for prediction in y2_pscan_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(bforce)!=0:
-	y2_bforce_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-bruteforce.csv","/root/Desktop/sandbox/bruteforce.csv",testing=True)
+	y2_bforce_predicted = layer2_classifier.layer2_classify("csv/train/layer2/benign-tekever-bruteforce.csv",TMP_DIR +"/bruteforce.csv",testing=True)
 	for prediction in y2_bforce_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)

@@ -18,7 +18,7 @@ if [ "$2" == "m" ] || [ "$2" == "u" ] ; then
 elif [ "$2" == "b" ] ; then
 	python scripts/compact_flows.py "csv/test/extracted/$csv_filename" "csv/test/allfeatures/" -f "scripts/features/all.txt" --benign
 else
-	echo "Error. Exiting"
+	echo "Give option <benign(b)|malign(m)|unkown(u)>"
 	exit 1
 fi
 
