@@ -4,8 +4,6 @@ import numpy as np
 import sys, argparse, hashlib
 from os import path
 from classifier_functions import save_model, load_model, print_stats
-from sklearn.neural_network import MLPClassifier
-#new
 from sklearn.ensemble import RandomForestRegressor
 
 # =====================
@@ -53,19 +51,19 @@ def train_new_network(filename):
     y_train = np.array(y_train, dtype='float64')
     #scaler = preprocessing.StandardScaler().fit(X_train)
     #X_train = scaler.transform(X_train)    # normalize
-    random_forest_classifier = RandomForestRegressor(max_depth=3, random_state=0)
+    classifier = RandomForestRegressor(max_depth=3, random_state=0)
     print("Training... (" + filename + ")")
-    random_forest_classifier.fit(X_train, y_train)
-    return label_count, random_forest_classifier
+    classifier.fit(X_train, y_train)
+    return label_count, classifier
 
-def predict(random_forest_classifier, filename, testing=False):
+def predict(classifier, filename, testing=False):
     if testing: print('Reading Test Dataset...')
     X_test, y_test = parse_csvdataset(filename,testing)
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
     #X_test = scaler.transform(X_test)      # normalize
     if testing: print("Predicting... (" + filename + ")\n")
-    y_predicted = random_forest_classifier.predict(X_test)
+    y_predicted = classifier.predict(X_test)
     return y_test, y_predicted
 
 def layer2_classify(train_filename, test_filename, load=False, testing=False):
@@ -73,13 +71,13 @@ def layer2_classify(train_filename, test_filename, load=False, testing=False):
     with open(train_filename, 'rb') as tf: digester.update(tf.read())
     saved_path = 'saved_neural_networks/layer2/%s-%s' % (train_filename.strip('/.csv').replace('/','-'), digester.hexdigest())
     if path.isfile(saved_path) and not load: # default if it exists
-        random_forest_classifier = load_model(saved_path, testing)
+        classifier = load_model(saved_path, testing)
     else: # create a new network
-        label_count, random_forest_classifier = train_new_network(train_filename)
-        save_model(saved_path, random_forest_classifier)
+        label_count, classifier = train_new_network(train_filename)
+        save_model(saved_path, classifier)
 
-    #print(random_forest_classifier.feature_importances_)
-    y_test, y_predicted = predict(random_forest_classifier, test_filename, testing)
+    #print(classifier.feature_importances_)
+    y_test, y_predicted = predict(classifier, test_filename, testing)
 
     if testing:
         print_stats(y_predicted, y_test, LABELS, OUTPUTS,
@@ -87,14 +85,3 @@ def layer2_classify(train_filename, test_filename, load=False, testing=False):
                     test_filename, None if not load else label_count)
 
     return y_predicted
-
-# train_test_split is not working as expected
-    # X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=42,stratify=y_train)
-
-# FIND THE BEST PARAMETERS BASED ON TRAINING INPUT USING A GRID_SEARCH
-    #MultilayerPerceptron = MLPClassifier()
-    #print("Searching Grid")
-    #clf = GridSearchCV(MultilayerPerceptron, PARAM_GRID, cv=3, scoring='accuracy')
-
-    #print("Best parameters set found on development set:")
-    #print(clf)
