@@ -22,14 +22,6 @@ CLASSIFICATIONS = dict(zip(conf.options('l2-labels'), range(len(conf.options('l2
 OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
 ATTACK_TYPES = conf.options('l2-malign')
 
-# classifier setup
-if conf.has_option('l2', 'classifier_module'): exec('import '+ conf.get('l2', 'classifier_module')) # import classifier module
-MODEL = eval(conf.get('l2', 'classifier'))
-
-# scaler setup
-if conf.has_option('l2', 'scaler_module'): exec('import '+ conf.get('l2', 'scaler_module')) # import scaler module
-SCALER = eval(conf.get('l2', 'scaler')) if conf.has_option('l2', 'scaler') else None
-
 # =====================
 #       FUNCTIONS
 # =====================
@@ -53,36 +45,49 @@ def parse_csvdataset(filename, output_labels_known=False):
                     sys.exit(1)
     return x_in, y_in
 
-def train_new_network(filename):
-    print('Reading Training Dataset... (' + filename + ')')
+def train_new_network(filename, verbose=False):
+    '''Train a new Neural Network model from given test file'''
+
+    if verbose: print('Reading Training Dataset... (' + filename + ')')
     X_train, y_train = parse_csvdataset(filename, True)
     label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
-    if SCALER:
-        scaler = SCALER.fit(X_train)
-        X_train = scaler.transform(X_train)    # normalize
+
+# scaler setup
+    if conf.has_option('l2', 'scaler_module'):
+        exec('import '+ conf.get('l2', 'scaler_module')) # import scaler module
+    if conf.has_option('l2', 'scaler'):
+        scaler = eval(conf.get('l2', 'scaler')).fit(X_train)
+        X_train = scaler.transform(X_train) # normalize
         save_model("saved_neural_networks/layer1/scalerX",scaler)
-    print("Training... (" + filename + ")")
-    MODEL.fit(X_train, y_train)
-    return label_count, MODEL
+
+# classifier setup
+    if conf.has_option('l2', 'classifier_module'):
+        exec('import '+ conf.get('l2', 'classifier_module')) # import classifier module
+    model = eval(conf.get('l2', 'classifier'))
+    if verbose: print("Training... (" + filename + ")")
+    model.fit(X_train, y_train)
+    return label_count, model
 
 def predict(classifier, filename, testing=False):
     if testing: print('Reading Test Dataset...')
-    X_test, y_test = parse_csvdataset(filename,testing)
+    X_test, y_test = parse_csvdataset(filename, testing)
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
-    #X_test = scaler.transform(X_test)      # normalize
+    #X_test = scaler.transform(X_test) # normalize
     if testing: print("Predicting... (" + filename + ")\n")
     y_predicted = classifier.predict(X_test)
     return y_test, y_predicted
 
 def layer2_classify(train_filename, test_filename, load=False, testing=False):
-    digester = hashlib.md5()
-    with open(train_filename, 'rb') as tf: digester.update(tf.read())
-    saved_path = 'saved_neural_networks/layer2/%s-%s' % (train_filename.strip('/.csv').replace('/','-'), digester.hexdigest())
+    used_model_md5 = hashlib.md5()
+    used_model_md5.update(conf.get('l2', 'classifier').encode('utf-8'))
+    train_file_md5 = hashlib.md5()
+    with open(train_filename, 'rb') as tf: train_file_md5.update(tf.read())
+    saved_path = 'saved_neural_networks/layer2/%s-%s-%s' % (train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
     if path.isfile(saved_path) and not load: # default if it exists
-        classifier = load_model(saved_path, testing)
+        classifier = load_model(saved_path)
     else: # create a new network
         label_count, classifier = train_new_network(train_filename)
         save_model(saved_path, classifier)

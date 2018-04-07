@@ -4,7 +4,6 @@ from sklearn.metrics import accuracy_score, precision_score
 
 def save_model(filename, clfmodel):
     '''Save the model to disk'''
-    print("Saving neural-network...")
     if not os.path.isdir(os.path.dirname(filename)) and os.path.dirname(filename) != '':
         os.makedirs(os.path.dirname(filename))
     model_file = open(filename,'wb')
@@ -12,9 +11,8 @@ def save_model(filename, clfmodel):
     model_file.close()
     return
 
-def load_model(filename, testing=False):
+def load_model(filename):
     '''Load the model from disk'''
-    if testing: print("Loading neural-network...")
     if not os.path.isfile(filename):
         print("File %s does not exist." % filename)
         sys.exit(1)
