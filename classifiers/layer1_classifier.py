@@ -44,9 +44,9 @@ def parse_csvdataset(filename, output_labels_known=False):
             x_in.append(tmp[1:-1])
             if output_labels_known:
                 try:
-                    if tmp[-1]=="BENIGN": tmp[-1]="DoS-Attack" # in case we're testing benign and in test mode, we need to assign a known label
-                    if tmp[-1]=="FTP-Patator" or tmp[-1]=="SSH-Patator" or tmp[-1]=="TELNET-Patator": tmp[-1]="Bruteforce"
-                    if tmp[-1].find("DoS")!=-1: tmp[-1]="DoS-Attack"
+                    if tmp[-1]=="BENIGN": tmp[-1]="dos" # in case we're testing benign and in test mode, we need to assign a known label
+                    if tmp[-1] in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): tmp[-1]="bruteforce"
+                    if tmp[-1].find("dos")!=-1: tmp[-1]="dos"
                     y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
                 except IndexError:
                     print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
