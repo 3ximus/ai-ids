@@ -31,98 +31,58 @@ L1_TRAIN_FILE = conf.get('ids', 'l1')
 L2_NODE_NAMES = [op for op in conf.options('ids') if re.match('l2-.+', op)]
 L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 
-# setup temp directory and output files
+# verifiy configuration integrity
+l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
+if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
+    print("Number of l1 output labels and l2 nodes don't match in config file %s" % args.config_file)
+    exit()
+if not all([(item[0] == item[1][item[1].find('-')+1:] == item[2][item[2].find('-')+1:]) for item in zip(conf.options('labels-l1'), L2_NODE_NAMES, l2_sections)]):
+    print("Names of l1 output labels do not match l2 node names in config file %s" % args.config_file)
+    exit()
+
+# setup temp directory and l1 output / l2 input files
 TMP_DIR = '/tmp/ids.py.tmp/'
 if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
-TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in conf.options('labels-l1')]
-
+TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAMES]
 
 
 # =====================
 #       LAYER 1
 # =====================
 
-print("Layer 1: 'Attack-Profiling'")
+print("\n\033[1;36m    LAYER 1\033[m")
 y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], conf, args.disable_load, args.verbose)
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
 
-dos=[]
-pscan=[]
-bforce=[]
-for i,prediction in enumerate(y1_predicted):
-    if np.argmax(prediction)==0: #dos
-        dos.append(i)
-    elif np.argmax(prediction)==1: #portscan
-        pscan.append(i)
-    elif np.argmax(prediction)==2: #bruteforce
-        bforce.append(i)
-    else:
-        print("Error.")
+# OUTPUT DATA PARTITION TO FEED LAYER 2
 
+l2_input_files = [open(fd, 'w') for fd in TMP_L1_OUTPUT_FILES]
+l2_data_count = [0] * len(L2_NODE_NAMES)
+with open(args.files[0],"r") as fd: # TODO dont read test data so many times #9
+# write each data entry from test file to some l2 input file based on l1 prediction
+    for i, entry in enumerate((line[:-1] for line in fd)):
+        x = np.argmax(y1_predicted[i]) # speedup
+        l2_input_files[x].write(entry + '\n')
+        l2_data_count[x] += 1
+[fd.close() for fd in l2_input_files]
 
 
 # =====================
 #       LAYER 2
 # =====================
 
-print("Layer 2: 'Flow Classification'")
+print("\n\033[1;36m    LAYER 2\033[m")
 
-fd = open(args.files[0],"r")
-content = fd.readlines()
-content = [x.strip('\n') for x in content]
-fd.close()
+# output counter for l2
+output_counter = [0] * len(conf.options('labels-l2'))
 
-dos = set(dos)
-pscan = set(pscan)
-bforce = set(bforce)
-dos_of = open(TMP_L1_OUTPUT_FILES[0],"w")
-pscan_of = open(TMP_L1_OUTPUT_FILES[1],"w")
-bforce_of = open(TMP_L1_OUTPUT_FILES[2],"w")
+for node in range(len(L2_NODE_NAMES)):
+    if l2_data_count[node] != 0:
+        y2_dos_predicted = layer2.classify(L2_TRAIN_FILES[node], TMP_L1_OUTPUT_FILES[node],
+                                           L2_NODE_NAMES[node], conf, args.disable_load, args.verbose)
+        for prediction in y2_dos_predicted:
+            output_counter[np.argmax(prediction)] += 1
 
-print("Selecting layer1 selected flows...")
-for i,elem in enumerate(content):
-    if i in dos:
-        dos_of.write(elem + "\n")
-    elif i in pscan:
-        pscan_of.write(elem + "\n")
-    elif i in bforce:
-        bforce_of.write(elem + "\n")
-dos_of.close()
-pscan_of.close()
-bforce_of.close()
-
-benign=[]
-malign=[]
-if len(dos)!=0:
-    y2_dos_predicted = layer2.classify(L2_TRAIN_FILES[0], TMP_L1_OUTPUT_FILES[0], L2_NODE_NAMES[0], conf, args.disable_load, args.verbose)
-    for prediction in y2_dos_predicted:
-        if np.argmax(prediction)==0: #Benign
-            benign.append(1)
-        elif np.argmax(prediction)==1: #Malign
-            malign.append(1)
-if len(pscan)!=0:
-    y2_pscan_predicted = layer2.classify(L2_TRAIN_FILES[1], TMP_L1_OUTPUT_FILES[1], L2_NODE_NAMES[1], conf, args.disable_load, args.verbose)
-    for prediction in y2_pscan_predicted:
-        if np.argmax(prediction)==0: #Benign
-            benign.append(1)
-        elif np.argmax(prediction)==1: #Malign
-            malign.append(1)
-if len(bforce)!=0:
-    y2_bforce_predicted = layer2.classify(L2_TRAIN_FILES[2], TMP_L1_OUTPUT_FILES[2], L2_NODE_NAMES[2], conf, args.disable_load, args.verbose)
-    for prediction in y2_bforce_predicted:
-        if np.argmax(prediction)==0: #Benign
-            benign.append(1)
-        elif np.argmax(prediction)==1: #Malign
-            malign.append(1)
-
-benign_length = len(benign)
-malign_length = len(malign)
-print("\033[35m\n -----------\n | RESULTS |\n -----------\033[0;0m")
-print("\033[1;32m#Flows classified as benign:\033[0;0m")
-print(benign_length)
-print("\033[1;31m#Flows classified as malign:\033[0;0m")
-print(malign_length)
-print("\033[1;32mBenign/(Malign + Benign) ratio\033[0;0m")
-print(benign_length*100*1.0/(benign_length+malign_length),"%")
-print("\033[1;31mMalign/(Malign + Benign) ratio\033[0;0m")
-print(malign_length*100*1.0/(benign_length+malign_length),"%")
+print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
+print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
+print("Ratio:  \033[1;32m%9f\033[m | \033[1;31m%f\033[m" % (output_counter[0]*100./sum(output_counter), output_counter[1]*100./sum(output_counter)))

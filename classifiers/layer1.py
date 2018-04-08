@@ -80,7 +80,7 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, classif
 
 
 
-def predict(classifier, test_filename, attacks, outputs, saved_model_path=None, verbose=False):
+def predict(classifier, test_filename, attacks, outputs, scaler_path=None, verbose=False):
     '''Apply the given classifier model to a test dataset
 
         Parameters
@@ -89,7 +89,7 @@ def predict(classifier, test_filename, attacks, outputs, saved_model_path=None, 
         - test_filename       filename of the test dataset
         - attacks             dictionary that maps attack names to their index
         - outputs             list of output encodings, maps each index to a discrete binary output
-        - saved_model_path    directory path to save the scaler model
+        - scaler_path    directory path to save the scaler model
         - verbose             print actions
     '''
 
@@ -98,8 +98,8 @@ def predict(classifier, test_filename, attacks, outputs, saved_model_path=None, 
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
 
-    if saved_model_path and path.isfile(saved_model_path + "/scalerX"):
-        scaler = load_model(saved_model_path + "/scalerX")
+    if scaler_path and path.isfile(scaler_path + "/scalerX"):
+        scaler = load_model(scaler_path + "/scalerX")
         X_test = scaler.transform(X_test) # normalize
 
     if verbose: print("Predicting... (" + test_filename + ")\n")
