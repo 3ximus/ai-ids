@@ -34,7 +34,7 @@ TMP_L1_OUTPUT_BRUTEFORCE = TMP_DIR +"/bruteforce.csv"
 
 # Layer 1
 print("Layer 1: 'Attack-Profiling'")
-y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], disable_load=args.disable_load, verbose=args.verbose) # FIXME DONT USE argv since it expect a bool!!
+y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], config_file=args.config_file, disable_load=args.disable_load, verbose=args.verbose)
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
 
 dos=[]

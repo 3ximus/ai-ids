@@ -7,28 +7,18 @@ from classifier_functions import save_model, load_model, print_stats
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
 
-# =====================
-#     CONFIGURATION
-# =====================
 
-# load config file settings
-conf = configparser.ConfigParser(allow_no_value=True)
-conf.optionxform=str
-conf.read(path.dirname(__file__) + '/options.cfg')
 
-# set options
-LABELS = conf.getint('l1', 'labels')
-ATTACK_KEYS = conf.options('l1-labels')
-ATTACKS = dict(zip(ATTACK_KEYS, range(len(ATTACK_KEYS))))
-OUTPUTS = [[1 if j == i else 0 for j in range(LABELS)] for i in range(LABELS)]
+def parse_csvdataset(filename, attacks, outputs):
+    '''Parse a dataset
 
-SAVED_MODEL_PATH = conf.get('l1', 'saved_model_path')
+        Parameters
+        ----------
+        - filename       filename of the dataset
+        - attacks        dictionary that maps attack names to their index
+        - outputs        list of output encodings, maps each index to a discrete binary output
+    '''
 
-# =====================
-#       FUNCTIONS
-# =====================
-
-def parse_csvdataset(filename):
     x_in = []
     y_in = []
     with open(filename, 'r') as fd:
@@ -39,7 +29,7 @@ def parse_csvdataset(filename):
                 if tmp[-1]=="BENIGN": tmp[-1]="dos" # in case we're testing benign and in test mode, we need to assign a known label
                 if tmp[-1] in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): tmp[-1]="bruteforce"
                 if tmp[-1].find("dos")!=-1: tmp[-1]="dos"
-                y_in.append(OUTPUTS[ATTACKS[tmp[-1]]]) # choose result based on label
+                y_in.append(outputs[attacks[tmp[-1]]]) # choose result based on label
             except IndexError:
                 print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
                 exit()
@@ -49,12 +39,26 @@ def parse_csvdataset(filename):
     return x_in, y_in
 
 
-def train_new_network(test_filename, verbose=False):
-    '''Train a new Neural Network model from given test dataset file'''
+
+def train_new_network(test_filename, labels, outputs, attacks, saved_model_file, conf, verbose=False):
+    '''Train a new Neural Network model from given test dataset file
+
+        Parameters
+        ----------
+        - test_filename       filename of the test dataset
+        - labels              list of output labels
+        - outputs             list of output encodings, maps each index to a discrete binary output
+        - attacks             dictionary that maps attack names to their index
+        - saved_model_file    file path to save the model (including filename)
+        - conf                ConfigParser object from which the following options are loaded (section.option):
+                                  l1.scaler,  l1.scaler_module
+                                  l1.classifier, l1.classifier_module
+                              classifier options are mandatory
+    '''
 
     if verbose: print('Reading Training Dataset...')
-    X_train, y_train = parse_csvdataset(test_filename) # true, we know our labels
-    label_count = [y_train.count(OUTPUTS[i]) for i in range(LABELS)]
+    X_train, y_train = parse_csvdataset(test_filename, attacks, outputs) # true, we know our labels
+    label_count = [y_train.count(outputs[i]) for i in range(labels)]
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
 
@@ -64,7 +68,7 @@ def train_new_network(test_filename, verbose=False):
     if conf.has_option('l1', 'scaler'):
         scaler = eval(conf.get('l1', 'scaler')).fit(X_train)
         X_train = scaler.transform(X_train)    # normalize
-        save_model(SAVED_MODEL_PATH + "/scalerX", scaler)
+        save_model(path.dirname(saved_model_file) + "/scalerX", scaler)
 
 # classifier setup
     if conf.has_option('l1', 'classifier_module'):
@@ -72,46 +76,84 @@ def train_new_network(test_filename, verbose=False):
     model = eval(conf.get('l1', 'classifier'))
     if verbose: print("Training... (" + test_filename + ")")
     model.fit(X_train, y_train)
+    save_model(saved_model_file, model)
     return label_count, model
 
-def predict(classifier, test_filename, verbose=False):
-    '''Apply the given classifier model to a test dataset'''
+
+
+def predict(classifier, test_filename, attacks, outputs, saved_model_path, verbose=False):
+    '''Apply the given classifier model to a test dataset
+
+        Parameters
+        ----------
+        - classifier          classifier model
+        - test_filename       filename of the test dataset
+        - attacks             dictionary that maps attack names to their index
+        - outputs             list of output encodings, maps each index to a discrete binary output
+        - saved_model_path    directory path to save the scaler model
+        - verbose             print actions
+    '''
 
     if verbose: print('Reading Test Dataset...')
-    X_test, y_test = parse_csvdataset(test_filename)
+    X_test, y_test = parse_csvdataset(test_filename, attacks, outputs)
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
 
-    if path.isfile(SAVED_MODEL_PATH + "/scalerX"):
-        scaler = load_model(SAVED_MODEL_PATH + "/scalerX")
+    if path.isfile(saved_model_path + "/scalerX"):
+        scaler = load_model(saved_model_path + "/scalerX")
         X_test = scaler.transform(X_test) # normalize
 
     if verbose: print("Predicting... (" + test_filename + ")\n")
     y_predicted = classifier.predict_proba(X_test)
     return y_test, y_predicted
 
-def classify(train_filename, test_filename, disable_load=False, verbose=False):
+
+
+def classify(train_filename,
+             test_filename,
+             config_file=path.dirname(__file__) + '/options.cfg',
+             disable_load=False,
+             verbose=False):
     '''Create or load train model from given dataset and apply it to the test dataset
 
         If there is already a created model with the same classifier and train dataset
             it will be loaded, otherwise a new one is created and saved
         The disable_load option allows the default behaviour to be avoided
     '''
+
+# load config file settings
+    conf = configparser.ConfigParser(allow_no_value=True)
+    conf.optionxform=str
+    conf.read(config_file)
+
+# get options
+    labels = conf.getint('l1', 'labels')
+    attack_keys = conf.options('l1-labels')
+    attacks = dict(zip(attack_keys, range(len(attack_keys))))
+    outputs = [[1 if j == i else 0 for j in range(labels)] for i in range(labels)]
+
+    saved_model_path = conf.get('l1', 'saved_model_path')
+
+# generate saved path name
     used_model_md5 = hashlib.md5()
     used_model_md5.update(conf.get('l1', 'classifier').encode('utf-8'))
     train_file_md5 = hashlib.md5()
     with open(train_filename, 'rb') as tf: train_file_md5.update(tf.read())
-    saved_path = SAVED_MODEL_PATH + '/%s-%s-%s' % (train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
-    if path.isfile(saved_path) and not disable_load: # default if it exists
-        classifier = load_model(saved_path)
+    saved_model_file = saved_model_path + '/%s-%s-%s' % (
+            train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
+
+# train or load the network
+    if path.isfile(saved_model_file) and not disable_load:
+        classifier = load_model(saved_model_file)
     else: # create a new network
-        label_count, classifier = train_new_network(train_filename)
-        save_model(saved_path, classifier)
+        label_count, classifier = train_new_network(train_filename, labels, outputs, attacks, saved_model_file, conf, verbose)
+        # save_model(saved_model_file, classifier)
 
-    y_test, y_predicted = predict(classifier, test_filename, verbose)
+# apply network to the test data
+    y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, path.dirname(saved_model_file), verbose)
 
-    print_stats(y_predicted, y_test, LABELS, OUTPUTS,
-                lambda i: ATTACK_KEYS[i],
+    print_stats(y_predicted, y_test, labels, outputs,
+                lambda i: attack_keys[i],
                 test_filename, None if not disable_load else label_count)
     return y_predicted
 
