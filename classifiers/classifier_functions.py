@@ -21,7 +21,7 @@ def load_model(filename):
     model_file.close()
     return loaded_model
 
-def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filename, label_count=None):
+def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filename):
     '''Print Classifier Statistics on a test dataset
 
         Parameters
@@ -31,7 +31,6 @@ def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filen
         - labels          number of labels
         - outputs         categorical ouput classes (binary class array)
         - get_class_name  function that given the output index returns the output label class name
-        - label_count     count of train data for each label
     '''
     y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
     print("Classifier Correctly Classified:", accuracy_score(y_test, y_predicted, normalize=False) , "/" , len(y_predicted))
@@ -42,13 +41,13 @@ def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filen
     #  This does not take label imbalance into account.
     print("Classifier Precision:", precision_score(y_test.argmax(1), y_predicted.argmax(1), average='macro'),'\n')
 
-    print(("# Flows" if label_count else "") + "             Type  Predicted / TOTAL")
+    print("             Type  Predicted / TOTAL")
     y_predicted_lst = y_predicted.tolist()
     y_test_lst = y_test.tolist()
     for i in range(labels):
         predict, total = y_predicted_lst.count(outputs[i]), y_test_lst.count(outputs[i])
         color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
-        print("%s%s%16s     % 6d / %d\033[m" % (color, '% 7d ' % label_count[i] if label_count else '', get_class_name(i), predict, total))
+        print("%s%16s     % 6d / %d\033[m" % (color, get_class_name(i), predict, total))
     non_desc = sum((1 for elem in y_predicted_lst if elem.count(1) != 1))
     if non_desc: print("Non-descriptive output count:\033[1;33m", non_desc,"\033[mtest values")
 

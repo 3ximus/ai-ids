@@ -19,16 +19,15 @@ def parse_csvdataset(filename, attacks, outputs):
         - outputs        list of output encodings, maps each index to a discrete binary output
     '''
 
-    x_in = []
-    y_in = []
+    x_in, y_in = [], []
     with open(filename, 'r') as fd:
         for line in fd:
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])
+            if tmp[-1] == "BENIGN": tmp[-1] = "dos" # FIXME testing benign, we need to assign a known label
+            if tmp[-1] in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): tmp[-1] = "bruteforce"
+            if "dos" in tmp[-1]: tmp[-1] = "dos"
             try:
-                if tmp[-1]=="BENIGN": tmp[-1]="dos" # in case we're testing benign and in test mode, we need to assign a known label
-                if tmp[-1] in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): tmp[-1]="bruteforce"
-                if tmp[-1].find("dos")!=-1: tmp[-1]="dos"
                 y_in.append(outputs[attacks[tmp[-1]]]) # choose result based on label
             except IndexError:
                 print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
@@ -40,15 +39,14 @@ def parse_csvdataset(filename, attacks, outputs):
 
 
 
-def train_new_network(test_filename, labels, outputs, attacks, saved_model_file, conf, verbose=False):
+def train_new_network(test_filename, attacks, outputs, saved_model_file, conf, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
         ----------
         - test_filename       filename of the test dataset
-        - labels              list of output labels
-        - outputs             list of output encodings, maps each index to a discrete binary output
         - attacks             dictionary that maps attack names to their index
+        - outputs             list of output encodings, maps each index to a discrete binary output
         - saved_model_file    file path to save the model (including filename)
         - conf                ConfigParser object from which the following options are loaded (section.option):
                                   l1.scaler,  l1.scaler_module
@@ -57,8 +55,7 @@ def train_new_network(test_filename, labels, outputs, attacks, saved_model_file,
     '''
 
     if verbose: print('Reading Training Dataset...')
-    X_train, y_train = parse_csvdataset(test_filename, attacks, outputs) # true, we know our labels
-    label_count = [y_train.count(outputs[i]) for i in range(labels)]
+    X_train, y_train = parse_csvdataset(test_filename, attacks, outputs)
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
 
@@ -74,14 +71,16 @@ def train_new_network(test_filename, labels, outputs, attacks, saved_model_file,
     if conf.has_option('l1', 'classifier_module'):
         exec('import '+ conf.get('l1', 'classifier_module')) # import classifier module
     model = eval(conf.get('l1', 'classifier'))
+
+# train and save the model
     if verbose: print("Training... (" + test_filename + ")")
     model.fit(X_train, y_train)
     save_model(saved_model_file, model)
-    return label_count, model
+    return model
 
 
 
-def predict(classifier, test_filename, attacks, outputs, saved_model_path, verbose=False):
+def predict(classifier, test_filename, attacks, outputs, saved_model_path=None, verbose=False):
     '''Apply the given classifier model to a test dataset
 
         Parameters
@@ -99,7 +98,7 @@ def predict(classifier, test_filename, attacks, outputs, saved_model_path, verbo
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
 
-    if path.isfile(saved_model_path + "/scalerX"):
+    if saved_model_path and path.isfile(saved_model_path + "/scalerX"):
         scaler = load_model(saved_model_path + "/scalerX")
         X_test = scaler.transform(X_test) # normalize
 
@@ -134,7 +133,7 @@ def classify(train_filename,
 
     saved_model_path = conf.get('l1', 'saved_model_path')
 
-# generate saved path name
+# generate model filename
     used_model_md5 = hashlib.md5()
     used_model_md5.update(conf.get('l1', 'classifier').encode('utf-8'))
     train_file_md5 = hashlib.md5()
@@ -146,14 +145,12 @@ def classify(train_filename,
     if path.isfile(saved_model_file) and not disable_load:
         classifier = load_model(saved_model_file)
     else: # create a new network
-        label_count, classifier = train_new_network(train_filename, labels, outputs, attacks, saved_model_file, conf, verbose)
+        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file, conf, verbose)
         # save_model(saved_model_file, classifier)
 
 # apply network to the test data
     y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, path.dirname(saved_model_file), verbose)
 
-    print_stats(y_predicted, y_test, labels, outputs,
-                lambda i: attack_keys[i],
-                test_filename, None if not disable_load else label_count)
+    print_stats(y_predicted, y_test, labels, outputs, lambda i: attack_keys[i], test_filename)
     return y_predicted
 
