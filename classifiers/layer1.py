@@ -39,7 +39,7 @@ def parse_csvdataset(filename, attacks, outputs):
 
 
 
-def train_new_network(test_filename, attacks, outputs, saved_model_file, config, verbose=False):
+def train_new_network(test_filename, attacks, outputs, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
@@ -48,10 +48,10 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, config,
         - attacks             dictionary that maps attack names to their index
         - outputs             list of output encodings, maps each index to a discrete binary output
         - saved_model_file    file path to save the model (including filename)
-        - config                ConfigParser object from which the following options are loaded (section.option):
-                                  l1.scaler,  l1.scaler_module
-                                  l1.classifier, l1.classifier_module
-                              classifier options are mandatory
+        - classifier          string to be evaluated as the classifier
+        - classifier_module   string containing the classifier module if needed
+        - scaler              string to be evaluated as the scaler
+        - scaler_module       string containing the scaler module if needed
     '''
 
     if verbose: print('Reading Training Dataset...')
@@ -60,17 +60,17 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, config,
     y_train = np.array(y_train, dtype='float64')
 
 # scaler setup
-    if config.has_option('l1', 'scaler_module'):
-        exec('import '+ config.get('l1', 'scaler_module')) # import scaler module
-    if config.has_option('l1', 'scaler'):
-        scaler = eval(config.get('l1', 'scaler')).fit(X_train)
+    if scaler_module:
+        exec('import '+ scaler_module) # import scaler module
+    if scaler:
+        scaler = eval(scaler).fit(X_train)
         X_train = scaler.transform(X_train)    # normalize
         save_model(path.dirname(saved_model_file) + "/scalerX", scaler)
 
 # classifier setup
-    if config.has_option('l1', 'classifier_module'):
-        exec('import '+ config.get('l1', 'classifier_module')) # import classifier module
-    model = eval(config.get('l1', 'classifier'))
+    if classifier_module:
+        exec('import '+ classifier_module) # import classifier module
+    model = eval(classifier)
 
 # train and save the model
     if verbose: print("Training... (" + test_filename + ")")
@@ -123,12 +123,12 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
     '''
 
 # get options
-    labels = config.getint('l1', 'labels')
-    attack_keys = config.options('l1-labels')
+    attack_keys = config.options('labels-l1')
     attacks = dict(zip(attack_keys, range(len(attack_keys))))
-    outputs = [[1 if j == i else 0 for j in range(labels)] for i in range(labels)]
+    n_labels = len(attacks)
+    outputs = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
 
-    saved_model_path = config.get('l1', 'saved_model_path')
+    saved_model_path = config.get('l1', 'saved-model-path')
 
 # generate model filename
     used_model_md5 = hashlib.md5()
@@ -142,12 +142,17 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
     if path.isfile(saved_model_file) and not disable_load:
         classifier = load_model(saved_model_file)
     else: # create a new network
-        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file, config, verbose)
+        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file,
+                classifier=config.get('l1', 'classifier'),
+                classifier_module=config.get('l1', 'classifier-module') if config.has_option('l1', 'classifier-module') else None,
+                scaler=config.get('l1', 'scaler') if config.has_option('l1', 'scaler') else None,
+                scaler_module=config.get('l1', 'scaler-module') if config.has_option('l1', 'scaler-module') else None,
+                verbose=verbose)
         # save_model(saved_model_file, classifier)
 
 # apply network to the test data
     y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, path.dirname(saved_model_file), verbose)
 
-    print_stats(y_predicted, y_test, labels, outputs, lambda i: attack_keys[i], test_filename)
+    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: attack_keys[i], test_filename)
     return y_predicted
 

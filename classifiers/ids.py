@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import sys, os, argparse
+import os, argparse, re
 import numpy as np
 import layer1, layer2
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
 
 # =====================
-#		OPTIONS
+#     CLI OPTIONS
 # =====================
 
 op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
@@ -18,7 +18,7 @@ op.add_argument('-c', '--config-file', help="configuration file", dest='config_f
 args = op.parse_args()
 
 # =====================
-#	  CONFIGURATION
+#    CONFIGURATION
 # =====================
 
 # load config file settings
@@ -26,38 +26,45 @@ conf = configparser.ConfigParser(allow_no_value=True)
 conf.optionxform=str
 conf.read(args.config_file)
 
-# TODO CHANGE THIS HARDCODING
-L1_TRAIN_FILE = "csv/train/layer1/trainingNN1.csv"
-L2_TRAIN_FILE_DOS = "csv/train/layer2/benign-tekever-dos.csv"
-L2_TRAIN_FILE_PORTSCAN = "csv/train/layer2/benign-tekever-portscan.csv"
-L2_TRAIN_FILE_BRUTEFORCE = "csv/train/layer2/benign-tekever-bruteforce.csv"
+# load train files
+L1_TRAIN_FILE = conf.get('ids', 'l1')
+L2_NODE_NAMES = [op for op in conf.options('ids') if re.match('l2-.+', op)]
+L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 
-# setup temp directory
-TMP_DIR = '/tmp/ids.py.tmp'
+# setup temp directory and output files
+TMP_DIR = '/tmp/ids.py.tmp/'
 if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
-TMP_L1_OUTPUT_DOS = TMP_DIR +"/dos.csv"
-TMP_L1_OUTPUT_PORTSCAN = TMP_DIR +"/portscan.csv"
-TMP_L1_OUTPUT_BRUTEFORCE = TMP_DIR +"/bruteforce.csv"
+TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in conf.options('labels-l1')]
 
-# Layer 1
+
+
+# =====================
+#       LAYER 1
+# =====================
+
 print("Layer 1: 'Attack-Profiling'")
-y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], config=conf, disable_load=args.disable_load, verbose=args.verbose)
+y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], conf, args.disable_load, args.verbose)
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
 
 dos=[]
 pscan=[]
 bforce=[]
 for i,prediction in enumerate(y1_predicted):
-	if np.argmax(prediction)==0: #dos
-		dos.append(i)
-	elif np.argmax(prediction)==1: #portscan
-		pscan.append(i)
-	elif np.argmax(prediction)==2: #bruteforce
-		bforce.append(i)
-	else:
-		print("Error.")
+    if np.argmax(prediction)==0: #dos
+        dos.append(i)
+    elif np.argmax(prediction)==1: #portscan
+        pscan.append(i)
+    elif np.argmax(prediction)==2: #bruteforce
+        bforce.append(i)
+    else:
+        print("Error.")
 
-# Layer 2
+
+
+# =====================
+#       LAYER 2
+# =====================
+
 print("Layer 2: 'Flow Classification'")
 
 fd = open(args.files[0],"r")
@@ -68,18 +75,18 @@ fd.close()
 dos = set(dos)
 pscan = set(pscan)
 bforce = set(bforce)
-dos_of = open(TMP_L1_OUTPUT_DOS,"w")
-pscan_of = open(TMP_L1_OUTPUT_PORTSCAN,"w")
-bforce_of = open(TMP_L1_OUTPUT_BRUTEFORCE,"w")
+dos_of = open(TMP_L1_OUTPUT_FILES[0],"w")
+pscan_of = open(TMP_L1_OUTPUT_FILES[1],"w")
+bforce_of = open(TMP_L1_OUTPUT_FILES[2],"w")
 
 print("Selecting layer1 selected flows...")
 for i,elem in enumerate(content):
-	if i in dos:
-		dos_of.write(elem + "\n")
-	elif i in pscan:
-		pscan_of.write(elem + "\n")
-	elif i in bforce:
-		bforce_of.write(elem + "\n")
+    if i in dos:
+        dos_of.write(elem + "\n")
+    elif i in pscan:
+        pscan_of.write(elem + "\n")
+    elif i in bforce:
+        bforce_of.write(elem + "\n")
 dos_of.close()
 pscan_of.close()
 bforce_of.close()
@@ -87,26 +94,26 @@ bforce_of.close()
 benign=[]
 malign=[]
 if len(dos)!=0:
-	y2_dos_predicted = layer2.classify(L2_TRAIN_FILE_DOS, TMP_L1_OUTPUT_DOS, config=conf, disable_load=args.disable_load, verbose=args.verbose)
-	for prediction in y2_dos_predicted:
-		if np.argmax(prediction)==0: #Benign
-			benign.append(1)
-		elif np.argmax(prediction)==1: #Malign
-			malign.append(1)
+    y2_dos_predicted = layer2.classify(L2_TRAIN_FILES[0], TMP_L1_OUTPUT_FILES[0], L2_NODE_NAMES[0], conf, args.disable_load, args.verbose)
+    for prediction in y2_dos_predicted:
+        if np.argmax(prediction)==0: #Benign
+            benign.append(1)
+        elif np.argmax(prediction)==1: #Malign
+            malign.append(1)
 if len(pscan)!=0:
-	y2_pscan_predicted = layer2.classify(L2_TRAIN_FILE_PORTSCAN, TMP_L1_OUTPUT_PORTSCAN, config=conf, disable_load=args.disable_load, verbose=args.verbose)
-	for prediction in y2_pscan_predicted:
-		if np.argmax(prediction)==0: #Benign
-			benign.append(1)
-		elif np.argmax(prediction)==1: #Malign
-			malign.append(1)
+    y2_pscan_predicted = layer2.classify(L2_TRAIN_FILES[1], TMP_L1_OUTPUT_FILES[1], L2_NODE_NAMES[1], conf, args.disable_load, args.verbose)
+    for prediction in y2_pscan_predicted:
+        if np.argmax(prediction)==0: #Benign
+            benign.append(1)
+        elif np.argmax(prediction)==1: #Malign
+            malign.append(1)
 if len(bforce)!=0:
-	y2_bforce_predicted = layer2.classify(L2_TRAIN_FILE_BRUTEFORCE, TMP_L1_OUTPUT_BRUTEFORCE, config=conf, disable_load=args.disable_load, verbose=args.verbose)
-	for prediction in y2_bforce_predicted:
-		if np.argmax(prediction)==0: #Benign
-			benign.append(1)
-		elif np.argmax(prediction)==1: #Malign
-			malign.append(1)
+    y2_bforce_predicted = layer2.classify(L2_TRAIN_FILES[2], TMP_L1_OUTPUT_FILES[2], L2_NODE_NAMES[2], conf, args.disable_load, args.verbose)
+    for prediction in y2_bforce_predicted:
+        if np.argmax(prediction)==0: #Benign
+            benign.append(1)
+        elif np.argmax(prediction)==1: #Malign
+            malign.append(1)
 
 benign_length = len(benign)
 malign_length = len(malign)

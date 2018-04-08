@@ -21,14 +21,14 @@ def load_model(filename):
     model_file.close()
     return loaded_model
 
-def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filename):
+def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, test_filename):
     '''Print Classifier Statistics on a test dataset
 
         Parameters
         ----------
         - y_predicted     numpy list of predict NN outputs
         - y_test          numpy list of target outputs
-        - labels          number of labels
+        - n_labels          number of labels
         - outputs         categorical ouput classes (binary class array)
         - get_class_name  function that given the output index returns the output label class name
     '''
@@ -44,7 +44,7 @@ def print_stats(y_predicted, y_test, labels, outputs, get_class_name, test_filen
     print("             Type  Predicted / TOTAL")
     y_predicted_lst = y_predicted.tolist()
     y_test_lst = y_test.tolist()
-    for i in range(labels):
+    for i in range(n_labels):
         predict, total = y_predicted_lst.count(outputs[i]), y_test_lst.count(outputs[i])
         color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
         print("%s%16s     % 6d / %d\033[m" % (color, get_class_name(i), predict, total))

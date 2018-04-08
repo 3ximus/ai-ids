@@ -24,7 +24,7 @@ def parse_csvdataset(filename, attacks, outputs):
         for line in fd:
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])
-            if tmp[-1] != "BENIGN": tmp[-1] = "MALIGN"
+            if tmp[-1] not in attacks: tmp[-1] = "MALIGN" # default
             try:
                 y_in.append(outputs[attacks[tmp[-1]]]) # choose result based on label
             except IndexError:
@@ -36,7 +36,7 @@ def parse_csvdataset(filename, attacks, outputs):
     return x_in, y_in
 
 
-def train_new_network(test_filename, attacks, outputs, saved_model_file, config, verbose=False):
+def train_new_network(test_filename, attacks, outputs, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
@@ -45,10 +45,10 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, config,
         - attacks             dictionary that maps attack names to their index
         - outputs             list of output encodings, maps each index to a discrete binary output
         - saved_model_file    file path to save the model (including filename)
-        - config                ConfigParser object from which the following options are loaded (section.option):
-                                  l2.scaler,  l2.scaler_module
-                                  l2.classifier, l2.classifier_module
-                              classifier options are mandatory
+        - classifier          string to be evaluated as the classifier
+        - classifier_module   string containing the classifier module if needed
+        - scaler              string to be evaluated as the scaler
+        - scaler_module       string containing the scaler module if needed
     '''
 
     if verbose: print('Reading Training Dataset... (' + test_filename + ')')
@@ -57,17 +57,17 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, config,
     y_train = np.array(y_train, dtype='float64')
 
 # scaler setup
-    if config.has_option('l2', 'scaler_module'):
-        exec('import '+ config.get('l2', 'scaler_module')) # import scaler module
-    if config.has_option('l2', 'scaler'):
-        scaler = eval(config.get('l2', 'scaler')).fit(X_train)
+    if scaler_module:
+        exec('import '+ scaler_module) # import scaler module
+    if scaler:
+        scaler = eval(scaler).fit(X_train)
         X_train = scaler.transform(X_train) # normalize
         save_model(path.dirname(saved_model_file) + "/scalerX",scaler)
 
 # classifier setup
-    if config.has_option('l2', 'classifier_module'):
-        exec('import '+ config.get('l2', 'classifier_module')) # import classifier module
-    model = eval(config.get('l2', 'classifier'))
+    if classifier_module:
+        exec('import '+ classifier_module) # import classifier module
+    model = eval(classifier)
 
 # train and save the model
     if verbose: print("Training... (" + test_filename + ")")
@@ -105,7 +105,7 @@ def predict(classifier, test_filename, attacks, outputs, saved_model_path=None, 
 
 
 
-def classify(train_filename, test_filename, config, disable_load=False, verbose=False):
+def classify(train_filename, test_filename, node_name, config, disable_load=False, verbose=False):
     '''Create or load train model from given dataset and apply it to the test dataset
 
         If there is already a created model with the same classifier and train dataset
@@ -115,20 +115,21 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
         ----------
         - train_filename      filename of the train dataset
         - test_filename       filename of the test dataset
+        - node_name           name of this node (used to load config options)
         - config              ConfigParser object to get layer settings
         - disable_load        list of output encodings, maps each index to a discrete binary output
     '''
 
 # set options
-    labels = config.getint('l2', 'labels')
-    attacks = dict(zip(config.options('l2-labels'), range(len(config.options('l2-labels')))))
-    outputs = [[1 if j == i else 0 for j in range(labels)] for i in range(labels)]
+    attacks = dict(zip(config.options('labels-l2'), range(len(config.options('labels-l2')))))
+    n_labels = len(attacks)
+    outputs = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
 
-    saved_model_path = config.get('l1', 'saved_model_path')
+    saved_model_path = config.get(node_name, 'saved-model-path')
 
 # generate model filename
     used_model_md5 = hashlib.md5()
-    used_model_md5.update(config.get('l2', 'classifier').encode('utf-8'))
+    used_model_md5.update(config.get(node_name, 'classifier').encode('utf-8'))
     train_file_md5 = hashlib.md5()
     with open(train_filename, 'rb') as tf: train_file_md5.update(tf.read())
     saved_model_file = saved_model_path + '/%s-%s-%s' % (
@@ -138,11 +139,16 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
     if path.isfile(saved_model_file) and not disable_load:
         classifier = load_model(saved_model_file)
     else: # create a new network
-        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file, config, verbose)
+        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file,
+                classifier=config.get(node_name, 'classifier'),
+                classifier_module=config.get(node_name, 'classifier-module') if config.has_option(node_name, 'classifier-module') else None,
+                scaler=config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None,
+                scaler_module=config.get(node_name, 'scaler-module') if config.has_option(node_name, 'scaler-module') else None,
+                verbose=verbose)
         save_model(saved_model_file, classifier)
 
 # apply network to the test data
     y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, path.dirname(saved_model_file), verbose)
 
-    print_stats(y_predicted, y_test, labels, outputs, lambda i: list(attacks.keys())[i], test_filename)
+    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], test_filename)
     return y_predicted
