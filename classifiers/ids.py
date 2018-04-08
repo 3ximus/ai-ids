@@ -3,9 +3,11 @@ from __future__ import print_function
 import sys, os, argparse
 import numpy as np
 import layer1, layer2
+try: import configparser
+except ImportError: import ConfigParser as configparser # for python2
 
 # =====================
-#       OPTIONS
+#		OPTIONS
 # =====================
 
 op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
@@ -16,8 +18,13 @@ op.add_argument('-c', '--config-file', help="configuration file", dest='config_f
 args = op.parse_args()
 
 # =====================
-#     CONFIGURATION
+#	  CONFIGURATION
 # =====================
+
+# load config file settings
+conf = configparser.ConfigParser(allow_no_value=True)
+conf.optionxform=str
+conf.read(args.config_file)
 
 # TODO CHANGE THIS HARDCODING
 L1_TRAIN_FILE = "csv/train/layer1/trainingNN1.csv"
@@ -34,7 +41,7 @@ TMP_L1_OUTPUT_BRUTEFORCE = TMP_DIR +"/bruteforce.csv"
 
 # Layer 1
 print("Layer 1: 'Attack-Profiling'")
-y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], config_file=args.config_file, disable_load=args.disable_load, verbose=args.verbose)
+y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], config=conf, disable_load=args.disable_load, verbose=args.verbose)
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
 
 dos=[]
@@ -80,21 +87,21 @@ bforce_of.close()
 benign=[]
 malign=[]
 if len(dos)!=0:
-	y2_dos_predicted = layer2.classify(L2_TRAIN_FILE_DOS, TMP_L1_OUTPUT_DOS, disable_load=args.disable_load, verbose=args.verbose)
+	y2_dos_predicted = layer2.classify(L2_TRAIN_FILE_DOS, TMP_L1_OUTPUT_DOS, config=conf, disable_load=args.disable_load, verbose=args.verbose)
 	for prediction in y2_dos_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(pscan)!=0:
-	y2_pscan_predicted = layer2.classify(L2_TRAIN_FILE_PORTSCAN, TMP_L1_OUTPUT_PORTSCAN, disable_load=args.disable_load, verbose=args.verbose)
+	y2_pscan_predicted = layer2.classify(L2_TRAIN_FILE_PORTSCAN, TMP_L1_OUTPUT_PORTSCAN, config=conf, disable_load=args.disable_load, verbose=args.verbose)
 	for prediction in y2_pscan_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)
 		elif np.argmax(prediction)==1: #Malign
 			malign.append(1)
 if len(bforce)!=0:
-	y2_bforce_predicted = layer2.classify(L2_TRAIN_FILE_BRUTEFORCE, TMP_L1_OUTPUT_BRUTEFORCE, disable_load=args.disable_load, verbose=args.verbose)
+	y2_bforce_predicted = layer2.classify(L2_TRAIN_FILE_BRUTEFORCE, TMP_L1_OUTPUT_BRUTEFORCE, config=conf, disable_load=args.disable_load, verbose=args.verbose)
 	for prediction in y2_bforce_predicted:
 		if np.argmax(prediction)==0: #Benign
 			benign.append(1)

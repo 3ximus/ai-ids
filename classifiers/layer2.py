@@ -36,7 +36,7 @@ def parse_csvdataset(filename, attacks, outputs):
     return x_in, y_in
 
 
-def train_new_network(test_filename, attacks, outputs, saved_model_file, conf, verbose=False):
+def train_new_network(test_filename, attacks, outputs, saved_model_file, config, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
@@ -45,9 +45,9 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, conf, v
         - attacks             dictionary that maps attack names to their index
         - outputs             list of output encodings, maps each index to a discrete binary output
         - saved_model_file    file path to save the model (including filename)
-        - conf                ConfigParser object from which the following options are loaded (section.option):
-                                  l1.scaler,  l1.scaler_module
-                                  l1.classifier, l1.classifier_module
+        - config                ConfigParser object from which the following options are loaded (section.option):
+                                  l2.scaler,  l2.scaler_module
+                                  l2.classifier, l2.classifier_module
                               classifier options are mandatory
     '''
 
@@ -57,17 +57,17 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, conf, v
     y_train = np.array(y_train, dtype='float64')
 
 # scaler setup
-    if conf.has_option('l2', 'scaler_module'):
-        exec('import '+ conf.get('l2', 'scaler_module')) # import scaler module
-    if conf.has_option('l2', 'scaler'):
-        scaler = eval(conf.get('l2', 'scaler')).fit(X_train)
+    if config.has_option('l2', 'scaler_module'):
+        exec('import '+ config.get('l2', 'scaler_module')) # import scaler module
+    if config.has_option('l2', 'scaler'):
+        scaler = eval(config.get('l2', 'scaler')).fit(X_train)
         X_train = scaler.transform(X_train) # normalize
         save_model(path.dirname(saved_model_file) + "/scalerX",scaler)
 
 # classifier setup
-    if conf.has_option('l2', 'classifier_module'):
-        exec('import '+ conf.get('l2', 'classifier_module')) # import classifier module
-    model = eval(conf.get('l2', 'classifier'))
+    if config.has_option('l2', 'classifier_module'):
+        exec('import '+ config.get('l2', 'classifier_module')) # import classifier module
+    model = eval(config.get('l2', 'classifier'))
 
 # train and save the model
     if verbose: print("Training... (" + test_filename + ")")
@@ -105,33 +105,30 @@ def predict(classifier, test_filename, attacks, outputs, saved_model_path=None, 
 
 
 
-def classify(train_filename,
-             test_filename,
-             config_file=path.dirname(__file__) + '/options.cfg',
-             disable_load=False,
-             verbose=False):
+def classify(train_filename, test_filename, config, disable_load=False, verbose=False):
     '''Create or load train model from given dataset and apply it to the test dataset
 
         If there is already a created model with the same classifier and train dataset
             it will be loaded, otherwise a new one is created and saved
-        The disable_load option allows the default behaviour to be avoided
+
+        Parameters
+        ----------
+        - train_filename      filename of the train dataset
+        - test_filename       filename of the test dataset
+        - config              ConfigParser object to get layer settings
+        - disable_load        list of output encodings, maps each index to a discrete binary output
     '''
 
-# load config file settings
-    conf = configparser.ConfigParser(allow_no_value=True)
-    conf.optionxform=str
-    conf.read(config_file)
-
 # set options
-    labels = conf.getint('l2', 'labels')
-    attacks = dict(zip(conf.options('l2-labels'), range(len(conf.options('l2-labels')))))
+    labels = config.getint('l2', 'labels')
+    attacks = dict(zip(config.options('l2-labels'), range(len(config.options('l2-labels')))))
     outputs = [[1 if j == i else 0 for j in range(labels)] for i in range(labels)]
 
-    saved_model_path = conf.get('l1', 'saved_model_path')
+    saved_model_path = config.get('l1', 'saved_model_path')
 
 # generate model filename
     used_model_md5 = hashlib.md5()
-    used_model_md5.update(conf.get('l2', 'classifier').encode('utf-8'))
+    used_model_md5.update(config.get('l2', 'classifier').encode('utf-8'))
     train_file_md5 = hashlib.md5()
     with open(train_filename, 'rb') as tf: train_file_md5.update(tf.read())
     saved_model_file = saved_model_path + '/%s-%s-%s' % (
@@ -141,7 +138,7 @@ def classify(train_filename,
     if path.isfile(saved_model_file) and not disable_load:
         classifier = load_model(saved_model_file)
     else: # create a new network
-        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file, conf, verbose)
+        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file, config, verbose)
         save_model(saved_model_file, classifier)
 
 # apply network to the test data
