@@ -41,7 +41,7 @@ def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, test_fil
         predict, total = y_predicted_lst.count(outputs[i]), y_test_lst.count(outputs[i])
         color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
         print("%s%16s     % 6d / %d\033[m" % (color, get_class_name(i), predict, total))
-    print('    \033[1;34m->\033[m %f%% [%d/%d]' % (accuracy_score(y_test, y_predicted, normalize=True), accuracy_score(y_test, y_predicted, normalize=False) , len(y_predicted)))
+    print('    \033[1;34m->\033[m %f%% [%d/%d]' % (accuracy_score(y_test, y_predicted, normalize=True)*100, accuracy_score(y_test, y_predicted, normalize=False) , len(y_predicted)))
 
     # TODO REMOVE THIS CODE
     # non_desc = sum((1 for elem in y_predicted_lst if elem.count(1) != 1))
