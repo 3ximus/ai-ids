@@ -136,7 +136,7 @@ def classify(train_filename, test_filename, node_name, config, disable_load=Fals
             train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
 
 # train or load the network
-    if path.isfile(saved_model_file) and not disable_load:
+    if path.isfile(saved_model_file) and not disable_load and not config.has_option(node_name, 'force_train'):
         classifier = load_model(saved_model_file)
     else: # create a new network
         classifier = train_new_network(train_filename, attacks, outputs, saved_model_file,
