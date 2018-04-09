@@ -71,7 +71,7 @@ def train_new_network(train_filename, attacks, outputs, saved_model_file, node_n
 
 # train and save the model
     if verbose: print("Training... (" + test_filename + ")")
-    model.fit(X_train, y_train)
+    model.fit(X_train, [np.argmax(x) for x in y_train])
     save_model(saved_model_file, model)
     return model
 
@@ -101,6 +101,8 @@ def predict(classifier, test_filename, attacks, outputs, node_name, scaler_path=
 
     if verbose: print("Predicting... (" + test_filename + ")\n")
     y_predicted = classifier.predict(X_test)
+    print(y_predicted)
+    print(y_test)
     return y_test, y_predicted
 
 
