@@ -3,6 +3,7 @@ from __future__ import print_function
 import os, argparse, re
 import numpy as np
 import layer1, layer2
+from classifier_functions import parse_csvdataset
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
 
@@ -50,8 +51,11 @@ TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAM
 #       LAYER 1
 # =====================
 
+train_data = parse_csvdataset(L1_TRAIN_FILE)
+test_data = parse_csvdataset(args.files[0])
+
 print("\n\033[1;36m    LAYER 1\033[m")
-y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], conf, args.disable_load, args.verbose)
+y1_predicted = layer1.classify(train_data, test_data, L1_TRAIN_FILE, conf, args.disable_load, args.verbose)
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
 
 # OUTPUT DATA PARTITION TO FEED LAYER 2
@@ -78,7 +82,10 @@ output_counter = [0] * len(conf.options('labels-l2'))
 
 for node in range(len(L2_NODE_NAMES)):
     if l2_data_count[node] != 0:
-        y2_dos_predicted = layer2.classify(L2_TRAIN_FILES[node], TMP_L1_OUTPUT_FILES[node],
+        print(L2_NODE_NAMES[node])
+        train_data = parse_csvdataset(L2_TRAIN_FILES[node])
+        test_data = parse_csvdataset(l2_input_files[node])
+        y2_dos_predicted = layer2.classify(train_data, test_data, L2_TRAIN_FILES[node],
                                            L2_NODE_NAMES[node], conf, args.disable_load, args.verbose)
         for prediction in y2_dos_predicted:
             output_counter[np.argmax(prediction)] += 1

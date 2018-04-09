@@ -8,45 +8,34 @@ try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
 
 
-
-def parse_csvdataset(filename, attacks, outputs):
-    '''Parse a dataset
+def process_dataset(data, attacks, outputs):
+    '''Process a dataset
 
         Parameters
         ----------
-        - filename       filename of the dataset
-        - attacks        dictionary that maps attack names to their index
-        - outputs        list of output encodings, maps each index to a discrete binary output
+        - data             tuple with data input and data labels
+        - attacks          dictionary that maps attack names to their index
+        - outputs          list of output encodings, maps each index to a discrete binary output
     '''
-
-    x_in, y_in = [], []
-    with open(filename, 'r') as fd:
-        for line in fd:
-            tmp = line.strip('\n').split(',')
-            x_in.append(tmp[1:-1])
-            if tmp[-1] == "BENIGN": tmp[-1] = "dos" # FIXME testing benign, we need to assign a known label
-            if tmp[-1] in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): tmp[-1] = "bruteforce"
-            if "dos" in tmp[-1]: tmp[-1] = "dos"
-            try:
-                y_in.append(outputs[attacks[tmp[-1]]]) # choose result based on label
-            except IndexError:
-                print("ERROR: Dataset \"%s\" contains more labels than the ones allowed, \"%s\"." % (filename, tmp[-1]))
-                exit()
-            except KeyError:
-                print("ERROR: Dataset \"%s\" contains unknown label \"%s\"." % (filename, tmp[-1]))
-                exit()
-    return x_in, y_in
+    x_in, y_in = data
+    y_in_encoded = []
+    for i, label in enumerate(y_in):
+        if label == "BENIGN": y_in[i] = "dos" # FIXME testing benign, we need to assign a known label
+        if label in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): y_in[i] = "bruteforce"
+        if "dos" in label: y_in[i] = "dos"
+        y_in_encoded.append(outputs[attacks[y_in[i]]]) # choose result based on label
+    x_in = np.array(x_in, dtype='float64')
+    y_in_encoded = np.array(y_in_encoded, dtype='float64')
+    return x_in, y_in_encoded
 
 
 
-def train_new_network(train_filename, attacks, outputs, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
+def train_new_network(train_data, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
         ----------
-        - train_filename      filename of the train dataset
-        - attacks             dictionary that maps attack names to their index
-        - outputs             list of output encodings, maps each index to a discrete binary output
+        - train_data          tuple with data input and data labels
         - saved_model_file    file path to save the model (including filename)
         - classifier          string to be evaluated as the classifier
         - classifier_module   string containing the classifier module if needed
@@ -54,10 +43,7 @@ def train_new_network(train_filename, attacks, outputs, saved_model_file, classi
         - scaler_module       string containing the scaler module if needed
     '''
 
-    if verbose: print('Reading Training Dataset...')
-    X_train, y_train = parse_csvdataset(train_filename, attacks, outputs)
-    X_train = np.array(X_train, dtype='float64')
-    y_train = np.array(y_train, dtype='float64')
+    X_train, y_train = train_data
 
 # scaler setup
     if scaler_module:
@@ -73,42 +59,37 @@ def train_new_network(train_filename, attacks, outputs, saved_model_file, classi
     model = eval(classifier)
 
 # train and save the model
-    if verbose: print("Training... (" + train_filename + ")")
+    if verbose: print("Training... ")
     model.fit(X_train, y_train)
     save_model(saved_model_file, model)
     return model
 
 
 
-def predict(classifier, test_filename, attacks, outputs, scaler_path=None, verbose=False):
+def predict(classifier, test_data, scaler_path=None, verbose=False):
     '''Apply the given classifier model to a test dataset
 
         Parameters
         ----------
         - classifier          classifier model
-        - test_filename       filename of the test dataset
-        - attacks             dictionary that maps attack names to their index
-        - outputs             list of output encodings, maps each index to a discrete binary output
+        - test_data           tuple with data input and data labels
         - scaler_path         directory path to save the scaler model
         - verbose             print actions
     '''
 
-    if verbose: print('Reading Test Dataset...')
-    X_test, y_test = parse_csvdataset(test_filename, attacks, outputs)
-    X_test = np.array(X_test, dtype='float64')
-    y_test = np.array(y_test, dtype='float64')
+    X_test, y_test = test_data
 
     if scaler_path and path.isfile(scaler_path + "/scalerX"):
         scaler = load_model(scaler_path + "/scalerX")
         X_test = scaler.transform(X_test) # normalize
 
-    if verbose: print("Predicting... (" + test_filename + ")\n")
+    if verbose: print("Predicting... ")
     y_predicted = classifier.predict_proba(X_test)
     return y_test, y_predicted
 
 
 
-def classify(train_filename, test_filename, config, disable_load=False, verbose=False):
+def classify(train_data, test_data, train_filename, config, disable_load=False, verbose=False):
     '''Create or load train model from given dataset and apply it to the test dataset
 
         If there is already a created model with the same classifier and train dataset
@@ -116,8 +97,9 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
 
         Parameters
         ----------
+        - train_data          tuple with data input and data labels
+        - test_data           tuple with data input and data labels
         - train_filename      filename of the train dataset
-        - test_filename       filename of the test dataset
         - config              ConfigParser object to get layer settings
         - disable_load        list of output encodings, maps each index to a discrete binary output
     '''
@@ -142,7 +124,7 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
     if path.isfile(saved_model_file) and not disable_load and not config.has_option('l1', 'force_train'):
         classifier = load_model(saved_model_file)
     else: # create a new network
-        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file,
+        classifier = train_new_network(process_dataset(train_data, attacks, outputs), saved_model_file,
                 classifier=config.get('l1', 'classifier'),
                 classifier_module=config.get('l1', 'classifier-module') if config.has_option('l1', 'classifier-module') else None,
                 scaler=config.get('l1', 'scaler') if config.has_option('l1', 'scaler') else None,
@@ -151,8 +133,8 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
         # save_model(saved_model_file, classifier)
 
 # apply network to the test data
-    y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, path.dirname(saved_model_file), verbose)
+    y_test, y_predicted = predict(classifier, process_dataset(test_data, attacks, outputs), path.dirname(saved_model_file), verbose)
 
-    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: attack_keys[i], test_filename)
+    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: attack_keys[i])
     return y_predicted
 

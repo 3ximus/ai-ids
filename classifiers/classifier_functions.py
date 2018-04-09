@@ -21,7 +21,18 @@ def load_model(filename):
     model_file.close()
     return loaded_model
 
-def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, test_filename):
+def parse_csvdataset(filename):
+    '''Parse a dataset'''
+
+    x_in, y_in = [], []
+    with open(filename, 'r') as fd:
+        for line in fd:
+            tmp = line.strip('\n').split(',')
+            x_in.append(tmp[1:-1])
+            y_in.append(tmp[-1]) # choose result based on label
+    return x_in, y_in
+
+def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name):
     '''Print Classifier Statistics on a test dataset
 
         Parameters
@@ -33,7 +44,6 @@ def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, test_fil
         - get_class_name  function that given the output index returns the output label class name
     '''
     y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
-    print('\n'+os.path.basename(test_filename))
     print("            Type  Predicted / TOTAL")
     y_predicted_lst = y_predicted.tolist()
     y_test_lst = y_test.tolist()
