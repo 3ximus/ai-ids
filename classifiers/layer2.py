@@ -36,7 +36,7 @@ def parse_csvdataset(filename, attacks, outputs):
     return x_in, y_in
 
 
-def train_new_network(train_filename, attacks, outputs, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
+def train_new_network(train_filename, attacks, outputs, saved_model_file, node_name, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
@@ -62,7 +62,7 @@ def train_new_network(train_filename, attacks, outputs, saved_model_file, classi
     if scaler:
         scaler = eval(scaler).fit(X_train)
         X_train = scaler.transform(X_train) # normalize
-        save_model(path.dirname(saved_model_file) + "/scalerX",scaler)
+        save_model(path.dirname(saved_model_file) + "/scalerX" + node_name,scaler)
 
 # classifier setup
     if classifier_module:
@@ -77,7 +77,7 @@ def train_new_network(train_filename, attacks, outputs, saved_model_file, classi
 
 
 
-def predict(classifier, test_filename, attacks, outputs, scaler_path=None, verbose=False):
+def predict(classifier, test_filename, attacks, outputs, node_name, scaler_path=None, verbose=False):
     '''Apply the given classifier model to a test dataset
 
         Parameters
@@ -86,7 +86,7 @@ def predict(classifier, test_filename, attacks, outputs, scaler_path=None, verbo
         - test_filename       filename of the test dataset
         - attacks             dictionary that maps attack names to their index
         - outputs             list of output encodings, maps each index to a discrete binary output
-        - scaler_path    directory path to save the scaler model
+        - scaler_path         directory path to save the scaler model
         - verbose             print actions
     '''
 
@@ -95,8 +95,8 @@ def predict(classifier, test_filename, attacks, outputs, scaler_path=None, verbo
     X_test = np.array(X_test, dtype='float64')
     y_test = np.array(y_test, dtype='float64')
 
-    if scaler_path and path.isfile(scaler_path + "/scalerX"):
-        scaler = load_model(scaler_path + "/scalerX")
+    if scaler_path and path.isfile(scaler_path + "/scalerX" + node_name):
+        scaler = load_model(scaler_path + "/scalerX" + node_name)
         X_test = scaler.transform(X_test) # normalize
 
     if verbose: print("Predicting... (" + test_filename + ")\n")
@@ -133,13 +133,13 @@ def classify(train_filename, test_filename, node_name, config, disable_load=Fals
     train_file_md5 = hashlib.md5()
     with open(train_filename, 'rb') as tf: train_file_md5.update(tf.read())
     saved_model_file = saved_model_path + '/%s-%s-%s' % (
-            train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
+            train_filename[:-4].replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
 
 # train or load the network
     if path.isfile(saved_model_file) and not disable_load and not config.has_option(node_name, 'force_train'):
         classifier = load_model(saved_model_file)
     else: # create a new network
-        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file,
+        classifier = train_new_network(train_filename, attacks, outputs, saved_model_file, node_name,
                 classifier=config.get(node_name, 'classifier'),
                 classifier_module=config.get(node_name, 'classifier-module') if config.has_option(node_name, 'classifier-module') else None,
                 scaler=config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None,
@@ -148,7 +148,7 @@ def classify(train_filename, test_filename, node_name, config, disable_load=Fals
         save_model(saved_model_file, classifier)
 
 # apply network to the test data
-    y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, path.dirname(saved_model_file), verbose)
+    y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, node_name, path.dirname(saved_model_file) if config.has_option(node_name, 'scaler') else None, verbose)
 
     print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], test_filename)
     return y_predicted

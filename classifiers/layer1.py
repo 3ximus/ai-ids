@@ -89,7 +89,7 @@ def predict(classifier, test_filename, attacks, outputs, scaler_path=None, verbo
         - test_filename       filename of the test dataset
         - attacks             dictionary that maps attack names to their index
         - outputs             list of output encodings, maps each index to a discrete binary output
-        - scaler_path    directory path to save the scaler model
+        - scaler_path         directory path to save the scaler model
         - verbose             print actions
     '''
 
