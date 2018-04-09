@@ -8,21 +8,21 @@ csv_filename=${pcap_filename%.*}.csv
 #dataset conversion
 JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
 cd dist/bin
-./CICFlowMeter "$1" ../../csv/test/extracted/
+./CICFlowMeter "$1" ../../csv/extracted/test/
 cd ../..
 
-[[ -d "csv/test/allfeatures/" ]] || mkdir "csv/test/allfeatures/"
+[[ -d "csv/test/" ]] || mkdir "csv/test/"
 
 if [ "$2" == "m" ] || [ "$2" == "u" ] ; then
-	python scripts/compact_flows.py "csv/test/extracted/$csv_filename" "csv/test/allfeatures/" -f "scripts/features/all.txt"
+	python scripts/compact_flows.py "csv/extracted/test/$csv_filename" "csv/test/" -f "scripts/features/all.txt"
 elif [ "$2" == "b" ] ; then
-	python scripts/compact_flows.py "csv/test/extracted/$csv_filename" "csv/test/allfeatures/" -f "scripts/features/all.txt" --benign
+	python scripts/compact_flows.py "csv/extracted/test/$csv_filename" "csv/test/" -f "scripts/features/all.txt" --benign
 else
 	echo "Give option <benign(b)|malign(m)|unkown(u)>"
 	exit 1
 fi
 
 #classification
-python classifiers/ids.py "csv/test/allfeatures/$csv_filename"
+python classifiers/ids.py "csv/test/$csv_filename"
 
-rm "csv/test/allfeatures/$csv_filename"
+rm "csv/test/$csv_filename"
