@@ -24,6 +24,10 @@ else
 fi
 
 #classification
-python classifiers/ids.py "csv/test/malign/$csv_filename"
-
-rm "csv/test/malign/$csv_filename"
+if [ "$2" == "m" ] || [ "$2" == "u" ] ; then
+	python scripts/compact_flows.py "csv/test/malign/$csv_filename"
+elif [ "$2" == "b" ] ; then
+	python scripts/compact_flows.py "csv/test/benign/$csv_filename"
+fi
+#rm "csv/test/malign/$csv_filename"
+#rm "csv/test/benign/$csv_filename"
