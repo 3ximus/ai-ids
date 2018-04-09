@@ -39,12 +39,12 @@ def parse_csvdataset(filename, attacks, outputs):
 
 
 
-def train_new_network(test_filename, attacks, outputs, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
+def train_new_network(train_filename, attacks, outputs, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
         ----------
-        - test_filename       filename of the test dataset
+        - train_filename      filename of the train dataset
         - attacks             dictionary that maps attack names to their index
         - outputs             list of output encodings, maps each index to a discrete binary output
         - saved_model_file    file path to save the model (including filename)
@@ -55,7 +55,7 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, classif
     '''
 
     if verbose: print('Reading Training Dataset...')
-    X_train, y_train = parse_csvdataset(test_filename, attacks, outputs)
+    X_train, y_train = parse_csvdataset(train_filename, attacks, outputs)
     X_train = np.array(X_train, dtype='float64')
     y_train = np.array(y_train, dtype='float64')
 
@@ -73,7 +73,7 @@ def train_new_network(test_filename, attacks, outputs, saved_model_file, classif
     model = eval(classifier)
 
 # train and save the model
-    if verbose: print("Training... (" + test_filename + ")")
+    if verbose: print("Training... (" + train_filename + ")")
     model.fit(X_train, y_train)
     save_model(saved_model_file, model)
     return model
