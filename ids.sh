@@ -5,15 +5,19 @@ set -e
 pcap_filename=$(basename ${1})
 csv_filename=${pcap_filename%.*}.csv
 
-#dataset conversion
-JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
-cd dist/bin
-./CICFlowMeter "$1" ../../csv/extracted/test/
-cd ../..
+# ----------------
+# creating tests |
+# ----------------
 
+# dataset conversion (pcap --> csv)
+JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
+cd dist/bin
+./CICFlowMeter "$1" "../../csv/extracted/test/"
+cd ../..
 [[ -d "csv/test/malign" ]] || mkdir "csv/test/malign"
 [[ -d "csv/test/benign" ]] || mkdir "csv/test/benign"
 
+# dataset compactation
 if [ "$2" == "m" ] || [ "$2" == "u" ] ; then
 	python scripts/compact_flows.py "csv/extracted/test/$csv_filename" "csv/test/malign/" -f "scripts/features/all.txt"
 elif [ "$2" == "b" ] ; then
@@ -23,11 +27,15 @@ else
 	exit 1
 fi
 
-#classification
-if [ "$2" == "m" ] || [ "$2" == "u" ] ; then
-	python scripts/compact_flows.py "csv/test/malign/$csv_filename"
-elif [ "$2" == "b" ] ; then
-	python scripts/compact_flows.py "csv/test/benign/$csv_filename"
-fi
+# --------------
+# classifying  |
+# --------------
+
+#if [ "$2" == "m" ] || [ "$2" == "u" ] ; then
+#	python python classifiers/ids.py "csv/test/malign/$csv_filename"
+#elif [ "$2" == "b" ] ; then
+#	python python classifiers/ids.py "csv/test/benign/$csv_filename"
+#fi
+
 #rm "csv/test/malign/$csv_filename"
 #rm "csv/test/benign/$csv_filename"

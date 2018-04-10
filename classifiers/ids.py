@@ -60,7 +60,7 @@ l2_input_files = [open(fd, 'w') for fd in TMP_L1_OUTPUT_FILES]
 l2_data_count = [0] * len(L2_NODE_NAMES)
 with open(args.files[0],"r") as fd: # TODO dont read test data so many times #9
 # write each data entry from test file to some l2 input file based on l1 prediction
-    for i, entry in enumerate((line[:-1] for line in fd)):
+    for i, entry in enumerate(fd.read().splitlines()):
         x = np.argmax(y1_predicted[i]) # speedup
         l2_input_files[x].write(entry + '\n')
         l2_data_count[x] += 1
