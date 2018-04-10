@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import plotly
 from plotly.graph_objs import Scatter, Line, Marker, Figure, Layout
 import re, glob
@@ -13,6 +13,7 @@ def parse_entry(fd, data_type):
     return match.group(data_type)
 
 result_files = glob.glob('results/results*')
+result_files.sort()
 malign_data, benign_data = {}, {}
 counter = 0
 for i, file in enumerate(result_files):
@@ -47,5 +48,5 @@ for data in malign_data, benign_data:
     traces = benign_traces # switch to benign tracers
 
 fig = Figure(data=malign_traces + benign_traces, layout=Layout( title='IDS results data', hovermode='closest'))
-plotly.offline.plot(fig, filename='results/graph.html', auto_open=True)
+plotly.offline.plot(fig, filename='results/graph.html', auto_open=False)
 
