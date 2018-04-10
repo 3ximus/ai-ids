@@ -36,6 +36,13 @@ for i, file in enumerate(result_files):
     for data in malign_data, benign_data: # fill data with None if none was attributed in this cycle
         [data[x].append(None) for x in data if len(data[x]) < counter]
 
+try:
+	average = lambda i, data: sum([float(x[i]) if x[i] else 0 for x in data.values()]) / len([1 for x in data.values() if x[i]])
+	result_files = [r[8:] + " M: %f B: %f" % (average(i, malign_data), average(i, benign_data)) for i, r in enumerate(result_files)]
+except ZeroDivisionError:
+	print("NOT ENOUGH DATA")
+	exit()
+
 malign_traces, benign_traces = [], []
 traces = malign_traces
 for data in malign_data, benign_data:
@@ -47,6 +54,15 @@ for data in malign_data, benign_data:
             name = key))
     traces = benign_traces # switch to benign tracers
 
-fig = Figure(data=malign_traces + benign_traces, layout=Layout( title='IDS results data', hovermode='closest'))
+updatemenus = list([
+	dict(buttons = list([
+		dict(label="All", method='restyle', args=['visible',[True]*(len(malign_data)+len(benign_data))]),
+		dict(label="Malign", method='restyle', args=['visible',[True]*len(malign_data)+[False]*len(benign_data)]),
+		dict(label="Benign", method='restyle', args=['visible',[False]*len(malign_data)+[True]*len(benign_data)]),
+	]), direction='left', type = 'buttons', x = 0.05, xanchor = 'left', y = 1, yanchor = 'bottom',
+	pad = {'b': 1, 'l': 1}),
+	])
+
+fig = Figure(data=malign_traces + benign_traces, layout=Layout( title='IDS results data', hovermode='closest', updatemenus=updatemenus))
 plotly.offline.plot(fig, filename='results/graph.html', auto_open=False)
 
