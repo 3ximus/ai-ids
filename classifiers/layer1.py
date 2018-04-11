@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import numpy as np
-import hashlib
 from os import path
-from classifier_functions import save_model, load_model, print_stats
+from classifier_functions import save_model, load_model, print_stats, gen_saved_model_pathname
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
 
@@ -110,15 +109,8 @@ def classify(train_data, test_data, train_filename, config, disable_load=False, 
     n_labels = len(attacks)
     outputs = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
 
-    saved_model_path = config.get('l1', 'saved-model-path')
-
 # generate model filename
-    used_model_md5 = hashlib.md5()
-    used_model_md5.update(config.get('l1', 'classifier').encode('utf-8'))
-    train_file_md5 = hashlib.md5()
-    with open(train_filename, 'rb') as tf: train_file_md5.update(tf.read())
-    saved_model_file = saved_model_path + '/%s-%s-%s' % (
-            train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
+    saved_model_file = gen_saved_model_pathname(config.get('l1', 'saved-model-path'), train_filename, config.get('l1', 'classifier'))
 
 # train or load the network
     if path.isfile(saved_model_file) and not disable_load and not config.has_option('l1', 'force_train'):
