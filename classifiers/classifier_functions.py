@@ -1,5 +1,5 @@
 from __future__ import print_function
-import os, pickle
+import os, pickle, hashlib
 from sklearn.metrics import accuracy_score, precision_score
 
 def save_model(filename, clfmodel):
@@ -20,6 +20,23 @@ def load_model(filename):
     loaded_model = pickle.load(model_file)
     model_file.close()
     return loaded_model
+
+def gen_saved_model_pathname(base_path, train_filename, classifier_settings):
+    '''Generate name of saved model file
+
+        Parameters
+        ----------
+        - base_path                base path name
+        - train_filename           train file name
+        - classifier_settings      string for with classifier training settings
+    '''
+    used_model_md5 = hashlib.md5()
+    used_model_md5.update(classifier_settings.encode('utf-8'))
+    train_file_md5 = hashlib.md5()
+    with open(train_filename, 'rb') as tf:
+        train_file_md5.update(tf.read())
+    return base_path + '/%s-%s-%s' % (train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
+
 
 def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, test_filename):
     '''Print Classifier Statistics on a test dataset
