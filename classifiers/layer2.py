@@ -35,7 +35,7 @@ def parse_csvdataset(filename, attacks, outputs):
     return x_in, y_in
 
 
-def train_new_network(train_filename, attacks, outputs, saved_model_file, node_name, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
+def train_new_network(train_filename, attacks, outputs, saved_model_file, node_name, classifier, classifier_module=None, scaler=None, scaler_module=None, regressor=False, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
@@ -70,7 +70,9 @@ def train_new_network(train_filename, attacks, outputs, saved_model_file, node_n
 
 # train and save the model
     if verbose: print("Training... (" + test_filename + ")")
-    model.fit(X_train, [np.argmax(x) for x in y_train])
+    if regressor:
+        y_train = [np.argmax(x) for x in y_train]
+    model.fit(X_train, )
     save_model(saved_model_file, model)
     return model
 
@@ -100,8 +102,6 @@ def predict(classifier, test_filename, attacks, outputs, node_name, scaler_path=
 
     if verbose: print("Predicting... (" + test_filename + ")\n")
     y_predicted = classifier.predict(X_test)
-    print(y_predicted)
-    print(y_test)
     return y_test, y_predicted
 
 
@@ -125,6 +125,7 @@ def classify(train_filename, test_filename, node_name, config, disable_load=Fals
     attacks = dict(zip(config.options('labels-l2'), range(len(config.options('labels-l2')))))
     n_labels = len(attacks)
     outputs = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
+    use_regressor = config.has_option(node_name, 'regressor')
 
 # generate model filename
     saved_model_file = gen_saved_model_pathname(config.get(node_name, 'saved-model-path'), train_filename, config.get(node_name, 'classifier'))
@@ -138,12 +139,28 @@ def classify(train_filename, test_filename, node_name, config, disable_load=Fals
                 classifier_module=config.get(node_name, 'classifier-module') if config.has_option(node_name, 'classifier-module') else None,
                 scaler=config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None,
                 scaler_module=config.get(node_name, 'scaler-module') if config.has_option(node_name, 'scaler-module') else None,
-                verbose=verbose)
+                regressor=use_regressor, verbose=verbose)
         save_model(saved_model_file, classifier)
 
 # apply network to the test data
     y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, node_name, path.dirname(saved_model_file) if config.has_option(node_name, 'scaler') else None, verbose)
+    if use_regressor:
+        y_test = [np.argmax(x) for x in y_test]
+        outputs = [np.argmax(x) for x in outputs]
+    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], test_filename, regressor=use_regressor)
 
-    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], test_filename)
+    # import os
+    # from sklearn.metrics import accuracy_score
+    # get_class_name = lambda i: list(attacks.keys())[i]
+    # y_test = [np.argmax(x) for x in y_test]
+    # print('\n'+os.path.basename(test_filename))
+    # print("            Type  Predicted / TOTAL")
+    # y_predicted = y_predicted.tolist()
+    # outputs = [np.argmax(x) for x in outputs]
+    # for i in range(n_labels):
+    #     predicted, total = y_predicted.count(outputs[i]), y_test.count(outputs[i])
+    #     color = '' if predicted == total == 0 else '\033[1;3%dm' % (1 if predicted > total else 2)
+    #     print("%s%16s     % 6d / %d\033[m" % (color, get_class_name(i), predicted, total))
+    # print('    \033[1;34m->\033[m %f%% [%d/%d]' % (accuracy_score(y_test, y_predicted, normalize=True)*100, accuracy_score(y_test, y_predicted, normalize=False) , len(y_predicted)))
     return y_predicted
 
