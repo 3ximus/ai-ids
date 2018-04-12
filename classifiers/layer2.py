@@ -3,9 +3,6 @@ from __future__ import print_function
 import numpy as np
 from os import path
 from classifier_functions import save_model, load_model, print_stats, gen_saved_model_pathname
-try: import configparser
-except ImportError: import ConfigParser as configparser # for python2
-
 
 
 def parse_csvdataset(filename, attacks, outputs):
@@ -69,10 +66,16 @@ def train_new_network(train_filename, attacks, outputs, saved_model_file, node_n
     model = eval(classifier)
 
 # train and save the model
-    if verbose: print("Training... (" + test_filename + ")")
+    if verbose: print("Training...")
     if regressor:
         y_train = [np.argmax(x) for x in y_train]
-    model.fit(X_train, )
+    try:
+        model.fit(X_train, y_train)
+    except ValueError as err:
+        print("\n\033[1;31mERROR\033[m: Problem found when training model in L2.")
+        print("This classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % model)
+        print("ValueError:", err)
+        exit()
     save_model(saved_model_file, model)
     return model
 
@@ -147,7 +150,7 @@ def classify(train_filename, test_filename, node_name, config, disable_load=Fals
     if use_regressor:
         y_test = [np.argmax(x) for x in y_test]
         outputs = [np.argmax(x) for x in outputs]
-    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], test_filename, regressor=use_regressor)
+    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], test_filename, use_regressor=use_regressor)
 
     # import os
     # from sklearn.metrics import accuracy_score

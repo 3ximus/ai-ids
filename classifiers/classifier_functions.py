@@ -52,10 +52,10 @@ def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, test_fil
     if not use_regressor: y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
     print('\n'+os.path.basename(test_filename))
     print("            Type  Predicted / TOTAL")
-    y_predicted = y_predicted.tolist()
-    y_test = y_test.tolist()
+    y_predicted_lst = y_predicted.tolist()
+    y_test_lst = y_test.tolist() if not use_regressor else y_test
     for i in range(n_labels):
-        predict, total = y_predicted.count(outputs[i]), y_test.count(outputs[i])
+        predict, total = y_predicted_lst.count(outputs[i]), y_test_lst.count(outputs[i])
         color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
         print("%s%16s     % 6d / %d\033[m" % (color, get_class_name(i), predict, total))
     print('    \033[1;34m->\033[m %f%% [%d/%d]' % (accuracy_score(y_test, y_predicted, normalize=True)*100, accuracy_score(y_test, y_predicted, normalize=False) , len(y_predicted)))

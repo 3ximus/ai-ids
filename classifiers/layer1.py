@@ -3,8 +3,6 @@ from __future__ import print_function
 import numpy as np
 from os import path
 from classifier_functions import save_model, load_model, print_stats, gen_saved_model_pathname
-try: import configparser
-except ImportError: import ConfigParser as configparser # for python2
 
 
 
