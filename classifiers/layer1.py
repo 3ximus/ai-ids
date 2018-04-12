@@ -2,7 +2,7 @@
 from __future__ import print_function
 import numpy as np
 from os import path
-from classifier_functions import save_model, load_model, print_stats, gen_saved_model_pathname
+from classifier_functions import *
 
 
 def process_dataset(data, attacks, outputs):
@@ -24,66 +24,6 @@ def process_dataset(data, attacks, outputs):
     x_in = np.array(x_in, dtype='float64')
     y_in_encoded = np.array(y_in_encoded, dtype='float64')
     return x_in, y_in_encoded
-
-
-
-def train_new_network(train_data, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
-    '''Train a new Neural Network model from given test dataset file
-
-        Parameters
-        ----------
-        - train_data          tuple with data input and data labels
-        - saved_model_file    file path to save the model (including filename)
-        - classifier          string to be evaluated as the classifier
-        - classifier_module   string containing the classifier module if needed
-        - scaler              string to be evaluated as the scaler
-        - scaler_module       string containing the scaler module if needed
-    '''
-
-    X_train, y_train = train_data
-
-# scaler setup
-    if scaler_module:
-        exec('import '+ scaler_module) # import scaler module
-    if scaler:
-        scaler = eval(scaler).fit(X_train)
-        X_train = scaler.transform(X_train)    # normalize
-        save_model(path.dirname(saved_model_file) + "/scalerX", scaler)
-
-# classifier setup
-    if classifier_module:
-        exec('import '+ classifier_module) # import classifier module
-    model = eval(classifier)
-
-# train and save the model
-    if verbose: print("Training... ")
-    model.fit(X_train, y_train)
-    save_model(saved_model_file, model)
-    return model
-
-
-
-def predict(classifier, test_data, scaler_path=None, verbose=False):
-    '''Apply the given classifier model to a test dataset
-
-        Parameters
-        ----------
-        - classifier          classifier model
-        - test_data           tuple with data input and data labels
-        - scaler_path         directory path to save the scaler model
-        - verbose             print actions
-    '''
-
-    X_test, y_test = test_data
-
-    if scaler_path and path.isfile(scaler_path + "/scalerX"):
-        scaler = load_model(scaler_path + "/scalerX")
-        X_test = scaler.transform(X_test) # normalize
-
-    if verbose: print("Predicting... ")
-    y_predicted = classifier.predict_proba(X_test)
-    return y_test, y_predicted
-
 
 
 def classify(train_data, test_data, train_filename, config, disable_load=False, verbose=False):
@@ -114,7 +54,7 @@ def classify(train_data, test_data, train_filename, config, disable_load=False, 
     if path.isfile(saved_model_file) and not disable_load and not config.has_option('l1', 'force_train'):
         classifier = load_model(saved_model_file)
     else: # create a new network
-        classifier = train_new_network(process_dataset(train_data, attacks, outputs), saved_model_file,
+        classifier = train_new_network(process_dataset(train_data, attacks, outputs), saved_model_file, 'l1',
                 classifier=config.get('l1', 'classifier'),
                 classifier_module=config.get('l1', 'classifier-module') if config.has_option('l1', 'classifier-module') else None,
                 scaler=config.get('l1', 'scaler') if config.has_option('l1', 'scaler') else None,
@@ -123,7 +63,7 @@ def classify(train_data, test_data, train_filename, config, disable_load=False, 
         # save_model(saved_model_file, classifier)
 
 # apply network to the test data
-    y_test, y_predicted = predict(classifier, process_dataset(test_data, attacks, outputs), path.dirname(saved_model_file), verbose)
+    y_test, y_predicted = predict(classifier, process_dataset(test_data, attacks, outputs), 'l1', path.dirname(saved_model_file), verbose)
 
     print_stats(y_predicted, y_test, n_labels, outputs, lambda i: attack_keys[i])
     return y_predicted

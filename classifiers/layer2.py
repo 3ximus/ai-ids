@@ -2,7 +2,7 @@
 from __future__ import print_function
 import numpy as np
 from os import path
-from classifier_functions import save_model, load_model, print_stats, gen_saved_model_pathname
+from classifier_functions import *
 
 def process_dataset(data, attacks, outputs):
     '''Process a dataset
@@ -20,74 +20,6 @@ def process_dataset(data, attacks, outputs):
     x_in = np.array(x_in, dtype='float64')
     y_in = np.array(y_in, dtype='float64')
     return x_in, y_in
-
-
-
-def train_new_network(train_data, saved_model_file, node_name, classifier, classifier_module=None, scaler=None, scaler_module=None, use_regressor=False, verbose=False):
-    '''Train a new Neural Network model from given test dataset file
-
-        Parameters
-        ----------
-        - train_data          tuple with data input and data labels
-        - saved_model_file    file path to save the model (including filename)
-        - classifier          string to be evaluated as the classifier
-        - classifier_module   string containing the classifier module if needed
-        - scaler              string to be evaluated as the scaler
-        - scaler_module       string containing the scaler module if needed
-    '''
-
-    X_train, y_train = train_data
-
-# scaler setup
-    if scaler_module:
-        exec('import '+ scaler_module) # import scaler module
-    if scaler:
-        scaler = eval(scaler).fit(X_train)
-        X_train = scaler.transform(X_train) # normalize
-        save_model(path.dirname(saved_model_file) + "/scalerX" + node_name,scaler)
-
-# classifier setup
-    if classifier_module:
-        exec('import '+ classifier_module) # import classifier module
-    model = eval(classifier)
-
-# train and save the model
-    if verbose: print("Training...")
-    if use_regressor:
-        y_train = [np.argmax(x) for x in y_train]
-    try:
-        model.fit(X_train, y_train)
-    except ValueError as err:
-        print("\n\033[1;31mERROR\033[m: Problem found when training model in L2.")
-        print("This classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % model)
-        print("ValueError:", err)
-        exit()
-    save_model(saved_model_file, model)
-    return model
-
-
-
-def predict(classifier, test_data, node_name, scaler_path=None, verbose=False):
-    '''Apply the given classifier model to a test dataset
-
-        Parameters
-        ----------
-        - classifier          classifier model
-        - test_data           tuple with data input and data labels
-        - scaler_path         directory path to save the scaler model
-        - verbose             print actions
-    '''
-
-    X_test, y_test = test_data
-
-    if scaler_path and path.isfile(scaler_path + "/scalerX" + node_name):
-        scaler = load_model(scaler_path + "/scalerX" + node_name)
-        X_test = scaler.transform(X_test) # normalize
-
-    if verbose: print("Predicting... ")
-    y_predicted = classifier.predict(X_test)
-    return y_test, y_predicted
-
 
 
 def classify(train_data, test_data, train_filename, node_name, config, disable_load=False, verbose=False):
