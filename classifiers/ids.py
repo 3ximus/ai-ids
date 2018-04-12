@@ -88,7 +88,8 @@ for node in range(len(L2_NODE_NAMES)):
         y2_dos_predicted = layer2.classify(train_data, test_data, L2_TRAIN_FILES[node],
                                            L2_NODE_NAMES[node], conf, args.disable_load, args.verbose)
         for prediction in y2_dos_predicted:
-            output_counter[np.argmax(prediction)] += 1
+            if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
+            else: output_counter[np.argmax(prediction)] += 1
 
 print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
 print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))

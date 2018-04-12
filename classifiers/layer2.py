@@ -3,9 +3,6 @@ from __future__ import print_function
 import numpy as np
 from os import path
 from classifier_functions import save_model, load_model, print_stats, gen_saved_model_pathname
-try: import configparser
-except ImportError: import ConfigParser as configparser # for python2
-
 
 def process_dataset(data, attacks, outputs):
     '''Process a dataset
@@ -26,7 +23,7 @@ def process_dataset(data, attacks, outputs):
 
 
 
-def train_new_network(train_data, saved_model_file, node_name, classifier, classifier_module=None, scaler=None, scaler_module=None, verbose=False):
+def train_new_network(train_data, saved_model_file, node_name, classifier, classifier_module=None, scaler=None, scaler_module=None, use_regressor=False, verbose=False):
     '''Train a new Neural Network model from given test dataset file
 
         Parameters
@@ -55,8 +52,16 @@ def train_new_network(train_data, saved_model_file, node_name, classifier, class
     model = eval(classifier)
 
 # train and save the model
-    if verbose: print("Training... ")
-    model.fit(X_train, y_train)
+    if verbose: print("Training...")
+    if use_regressor:
+        y_train = [np.argmax(x) for x in y_train]
+    try:
+        model.fit(X_train, y_train)
+    except ValueError as err:
+        print("\n\033[1;31mERROR\033[m: Problem found when training model in L2.")
+        print("This classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % model)
+        print("ValueError:", err)
+        exit()
     save_model(saved_model_file, model)
     return model
 
@@ -106,6 +111,7 @@ def classify(train_data, test_data, train_filename, node_name, config, disable_l
     attacks = dict(zip(config.options('labels-l2'), range(len(config.options('labels-l2')))))
     n_labels = len(attacks)
     outputs = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
+    use_regressor = config.has_option(node_name, 'regressor')
 
 # generate model filename
     saved_model_file = gen_saved_model_pathname(config.get(node_name, 'saved-model-path'), train_filename, config.get(node_name, 'classifier'))
@@ -119,12 +125,16 @@ def classify(train_data, test_data, train_filename, node_name, config, disable_l
                 classifier_module=config.get(node_name, 'classifier-module') if config.has_option(node_name, 'classifier-module') else None,
                 scaler=config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None,
                 scaler_module=config.get(node_name, 'scaler-module') if config.has_option(node_name, 'scaler-module') else None,
-                verbose=verbose)
+                use_regressor=use_regressor, verbose=verbose)
         save_model(saved_model_file, classifier)
 
 # apply network to the test data
     y_test, y_predicted = predict(classifier, process_dataset(test_data, attacks, outputs), node_name, path.dirname(saved_model_file) if config.has_option(node_name, 'scaler') else None, verbose)
 
-    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i])
+    if use_regressor:
+        y_test = [np.argmax(x) for x in y_test]
+        outputs = [np.argmax(x) for x in outputs]
+    print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], use_regressor=use_regressor)
+
     return y_predicted
 

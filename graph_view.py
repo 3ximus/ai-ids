@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import plotly
-from plotly.graph_objs import Scatter, Line, Marker, Figure, Layout
+from plotly.graph_objs import Scatter, Figure, Layout
 import re, glob
 
 TESTFILENAME_PATTERN = re.compile(r'RESULTS.+\[([^\]]+)\]')

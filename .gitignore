@@ -13,4 +13,5 @@ saved_neural_networks/*
 results/*
 # virtual environment
 IDS/*
+.vscode/*
 
