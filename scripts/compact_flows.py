@@ -30,9 +30,9 @@ if not path.isfile(args.features):
     print("File given does not exist. %s" % args.features)
     sys.exit(1)
 FEATURES_LIST = open(args.features, 'r').read().splitlines()
-KNOWN_LABELS = {"portscan": "portscan", "ftp.?(patator|bruteforce)": "ftpbruteforce", "ssh.?(patator|bruteforce)": "sshbruteforce",
-                "telnet.?(patator|bruteforce)": "telnetbruteforce", "bot": "bot", "infiltration": "infiltration",
-                "heartbleed": "heartbleed", "dos.?hulk": "doshulk", "dos.?goldeneye": "dosgoldeneye",
+KNOWN_LABELS = {"(ftp.?(patator|bruteforce)|ssh.?(patator|bruteforce)|telnet.?(patator|bruteforce))": "bruteforce",
+                "bot": "bot", "infiltration": "infiltration", "portscan": "portscan",
+                "heartbleed": "heartbleed", "(dos.?hulk|dos.?goldeneye)": "dos",
                 "dos.?slowloris": "dosslowloris", "dos.?slowhttptest": "dosslowhttptest", "ddos": "ddos",
                 "benign": "BENIGN"}
 
