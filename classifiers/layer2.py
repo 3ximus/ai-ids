@@ -52,13 +52,12 @@ def classify(train_data, test_data, train_filename, node_name, config, disable_l
     if path.isfile(saved_model_file) and not disable_load and not config.has_option(node_name, 'force_train'):
         classifier = load_model(saved_model_file)
     else: # create a new network
-        classifier = train_new_network(process_dataset(train_data, attacks, outputs), saved_model_file, node_name,
+        classifier = train_model(process_dataset(train_data, attacks, outputs), saved_model_file, node_name,
                 classifier=config.get(node_name, 'classifier'),
                 classifier_module=config.get(node_name, 'classifier-module') if config.has_option(node_name, 'classifier-module') else None,
                 scaler=config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None,
                 scaler_module=config.get(node_name, 'scaler-module') if config.has_option(node_name, 'scaler-module') else None,
                 use_regressor=use_regressor, verbose=verbose)
-        save_model(saved_model_file, classifier)
 
 # apply network to the test data
     y_test, y_predicted = predict(classifier, process_dataset(test_data, attacks, outputs), node_name, path.dirname(saved_model_file) if config.has_option(node_name, 'scaler') else None, verbose)
@@ -66,6 +65,8 @@ def classify(train_data, test_data, train_filename, node_name, config, disable_l
     if use_regressor:
         y_test = [np.argmax(x) for x in y_test]
         outputs = [np.argmax(x) for x in outputs]
+    else:
+        y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
     print_stats(y_predicted, y_test, n_labels, outputs, lambda i: list(attacks.keys())[i], use_regressor=use_regressor)
 
     return y_predicted
