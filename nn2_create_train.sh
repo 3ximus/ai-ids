@@ -20,12 +20,9 @@ echo "Compacting Malign flows..."	# obtained from static dirs ${NN2_EXTRACTED_TR
 #rm $directory/tekever-dos-*.csv
 
 #portscan
-#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "${directory}" -f "scripts/features/all.txt"
-#grep portscan ${directory}/tekever-portscan.csv | head -n 60000 > ${directory}/tekever-portscan.csv.tmp
-#grep BENIGN ${directory}/tekever-portscan.csv | head -n 60000 >> ${directory}/tekever-portscan.csv.tmp
-#mv ${directory}/tekever-portscan.csv.tmp ${directory}/tekever-portscan.csv
-
-cat csv/test/malign/*slow*.csv > ${directory}/tekever-slowdos.csv.tmp
+python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "${directory}" -f "scripts/features/all.txt"
+head -n 60000 ${directory}/tekever-portscan.csv > ${directory}/tekever-portscan.csv.tmp
+mv ${directory}/tekever-portscan.csv.tmp ${directory}/tekever-portscan.csv
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
