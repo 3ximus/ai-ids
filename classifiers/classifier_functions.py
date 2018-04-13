@@ -30,7 +30,7 @@ def parse_csvdataset(filename):
             tmp = line.strip('\n').split(',')
             x_in.append(tmp[1:-1])
             y_in.append(tmp[-1]) # choose result based on label
-    return [np.array(x_in, 'float64'), y_in]
+    return [x_in, y_in]
 
 
 def gen_saved_model_pathname(base_path, train_filename, classifier_settings):
@@ -117,16 +117,16 @@ def predict(classifier, test_data, saved_scaler_file=None, verbose=False):
     return y_predicted
 
 
-def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, use_regressor=False):
+def print_stats(y_predicted, y_test, n_labels, outputs, class_names, use_regressor=False):
     '''Print Classifier Statistics on a test dataset
 
         Parameters
         ----------
         - y_predicted     numpy list of predict NN outputs
         - y_test          numpy list of target outputs
-        - n_labels          number of labels
+        - n_labels        number of labels
         - outputs         categorical ouput classes (binary class array)
-        - get_class_name  function that given the output index returns the output label class name
+        - class_names     list that for each output index containes the matching output label
     '''
 
     print("            Type  Predicted / TOTAL")
@@ -135,7 +135,7 @@ def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, use_regr
     for i in range(n_labels):
         predict, total = y_predicted_lst.count(outputs[i]), y_test_lst.count(outputs[i])
         color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
-        print("%s%16s     % 6d / %d\033[m" % (color, get_class_name(i), predict, total))
+        print("%s%16s     % 6d / %d\033[m" % (color, class_names[i], predict, total))
     print('    \033[1;34m->\033[m %f%% [%d/%d]' % (accuracy_score(y_test, y_predicted, normalize=True)*100, accuracy_score(y_test, y_predicted, normalize=False) , len(y_predicted)))
 
     # TODO REMOVE THIS CODE

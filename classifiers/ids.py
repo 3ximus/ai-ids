@@ -3,7 +3,7 @@ from __future__ import print_function
 import os, argparse, re
 import numpy as np
 from layer1 import L1_Classifier
-import layer2
+from layer2 import L2_Classifier
 from classifier_functions import parse_csvdataset
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
@@ -52,9 +52,6 @@ TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAM
 #       LAYER 1
 # =====================
 
-import time
-t = time.time()
-
 print("\n\033[1;36m    LAYER 1\033[m")
 l1 = L1_Classifier(conf, args.verbose)
 l1.train(L1_TRAIN_FILE, args.disable_load)
@@ -62,9 +59,6 @@ l1.train(L1_TRAIN_FILE, args.disable_load)
 if args.verbose: print("Reading Test Dataset...")
 test_data = parse_csvdataset(args.files[0])
 y_predicted = l1.predict(test_data)
-
-print(time.time() - t)
-exit()
 
 # OUTPUT DATA PARTITION TO FEED LAYER 2
 
@@ -88,13 +82,17 @@ print("\n\033[1;36m    LAYER 2\033[m")
 # output counter for l2
 output_counter = [0] * len(conf.options('labels-l2'))
 
-for node in range(len(L2_NODE_NAMES)):
+l2_nodes = [L2_Classifier(node_name, conf, args.verbose) for node_name in L2_NODE_NAMES]
+
+for node in range(len(l2_nodes)):
     if l2_data_count[node] != 0:
         print(L2_NODE_NAMES[node])
-        train_data = parse_csvdataset(L2_TRAIN_FILES[node])
+        l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load)
+
+        if args.verbose: print("Reading Test Dataset...")
         test_data = parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
-        y_predicted = layer2.classify(train_data, test_data, L2_TRAIN_FILES[node],
-                                           L2_NODE_NAMES[node], conf, args.disable_load, args.verbose)
+        y_predicted = l2_nodes[node].predict(test_data)
+
         for prediction in y_predicted:
             if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
             else: output_counter[np.argmax(prediction)] += 1
