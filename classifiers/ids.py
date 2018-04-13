@@ -52,8 +52,10 @@ TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAM
 
 print("\n\033[1;36m    LAYER 1\033[m")
 y1_predicted = layer1.classify(L1_TRAIN_FILE, args.files[0], conf, args.disable_load, args.verbose)
+exit(1)
 y1_predicted = (y1_predicted == y1_predicted.max(axis=1, keepdims=True)).astype(int)
-
+#for i,elem in enumerate(y1_predicted):
+#    y1_predicted[i]=[1,0,0]
 # OUTPUT DATA PARTITION TO FEED LAYER 2
 
 l2_input_files = [open(fd, 'w') for fd in TMP_L1_OUTPUT_FILES]

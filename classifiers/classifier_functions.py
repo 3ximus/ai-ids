@@ -35,7 +35,7 @@ def gen_saved_model_pathname(base_path, train_filename, classifier_settings):
     train_file_md5 = hashlib.md5()
     with open(train_filename, 'rb') as tf:
         train_file_md5.update(tf.read())
-    return base_path + '/%s-%s-%s' % (train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
+    return base_path + '/%s-%s-%s' % (train_filename[:-4].replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
 
 
 def print_stats(y_predicted, y_test, n_labels, outputs, get_class_name, test_filename):

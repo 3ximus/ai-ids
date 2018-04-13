@@ -10,20 +10,22 @@ find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
 echo "Compacting Malign flows..."	# obtained from static dirs ${NN2_EXTRACTED_TRAIN}/*
 
 #bruteforce
-python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/bruteforce/*.csv "${directory}" -f "scripts/features/all.txt"
-cat $directory/tekever-*patator.csv > $directory/tekever-bruteforce.csv
-rm $directory/tekever-*patator.csv
+#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/bruteforce/*.csv "${directory}" -f "scripts/features/all.txt"
+#cat $directory/tekever-*patator.csv > $directory/tekever-bruteforce.csv
+#rm $directory/tekever-*patator.csv
 
 #dos
-python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/dos/*.csv "${directory}" -f "scripts/features/all.txt"
-cat $directory/tekever-dos-*.csv > $directory/tekever-dos.csv
-rm $directory/tekever-dos-*.csv
+#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/dos/*.csv "${directory}" -f "scripts/features/all.txt"
+#cat $directory/tekever-dos-*.csv > $directory/tekever-dos.csv
+#rm $directory/tekever-dos-*.csv
 
 #portscan
-python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "${directory}" -f "scripts/features/all.txt"
-grep portscan ${directory}/tekever-portscan.csv | head -n 60000 > ${directory}/tekever-portscan.csv.tmp
-grep BENIGN ${directory}/tekever-portscan.csv | head -n 60000 >> ${directory}/tekever-portscan.csv.tmp
-mv ${directory}/tekever-portscan.csv.tmp ${directory}/tekever-portscan.csv
+#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "${directory}" -f "scripts/features/all.txt"
+#grep portscan ${directory}/tekever-portscan.csv | head -n 60000 > ${directory}/tekever-portscan.csv.tmp
+#grep BENIGN ${directory}/tekever-portscan.csv | head -n 60000 >> ${directory}/tekever-portscan.csv.tmp
+#mv ${directory}/tekever-portscan.csv.tmp ${directory}/tekever-portscan.csv
+
+cat csv/test/malign/*slow*.csv > ${directory}/tekever-slowdos.csv.tmp
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign

@@ -102,7 +102,7 @@ def predict(classifier, test_filename, attacks, outputs, scaler_path=None, verbo
         X_test = scaler.transform(X_test) # normalize
 
     if verbose: print("Predicting... (" + test_filename + ")\n")
-    y_predicted = classifier.predict_proba(X_test)
+    y_predicted = classifier.predict(X_test)
     return y_test, y_predicted
 
 
@@ -144,7 +144,7 @@ def classify(train_filename, test_filename, config, disable_load=False, verbose=
 
 # apply network to the test data
     y_test, y_predicted = predict(classifier, test_filename, attacks, outputs, path.dirname(saved_model_file), verbose)
-
+    
     print_stats(y_predicted, y_test, n_labels, outputs, lambda i: attack_keys[i], test_filename)
     return y_predicted
 
