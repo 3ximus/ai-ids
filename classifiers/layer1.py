@@ -66,6 +66,7 @@ class L1_Classifier:
 		self.saved_scaler_file = path.dirname(self.saved_model_file) + '/scalerX_l1' if self.scaler else None
 
 		if path.isfile(self.saved_model_file) and not disable_load and not self.force_train:
+			if self.verbose: print("Loading model: %s" % self.saved_model_file)
 			self.model = load_model(self.saved_model_file)
 		else: # create a new network
 			train_data = parse_csvdataset(train_filename)

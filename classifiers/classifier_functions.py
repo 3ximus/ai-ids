@@ -47,7 +47,7 @@ def gen_saved_model_pathname(base_path, train_filename, classifier_settings):
     train_file_md5 = hashlib.md5()
     with open(train_filename, 'rb') as tf:
         train_file_md5.update(tf.read())
-    return base_path + '/%s-%s-%s' % (train_filename.strip('/.csv').replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
+    return base_path + '/%s-%s-%s' % (train_filename[:-4].replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
 
 
 def train_model(train_data, saved_model_file, classifier, classifier_module=None, scaler=None, scaler_module=None, saved_scaler_file=None, use_regressor=False, verbose=False):
@@ -108,7 +108,7 @@ def predict(classifier, test_data, saved_scaler_file=None, verbose=False):
     '''
 
     if saved_scaler_file and os.path.isfile(saved_scaler_file):
-        if verbose: print("Loading scaler %s" % saved_scaler_file)
+        if verbose: print("Loading scaler: %s" % saved_scaler_file)
         scaler = load_model(saved_scaler_file)
         test_data = scaler.transform(test_data) # normalize
 
