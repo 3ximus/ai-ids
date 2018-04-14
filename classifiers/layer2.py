@@ -7,18 +7,18 @@ from classifier_functions import *
 class L2_Classifier:
     '''Class to train and apply layer 2 classifier/regressor models'''
 
-    def __init__(self, node_name, config, verbose=False):
-        '''Create a model object with given node name and configuration options'''
-        self.verbose = verbose
+    def __init__(self, node_name, config, label_section, verbose=False):
+        '''Create a model object with given node_name, configuration and labels gathered from label_section in config options'''
 
+        self.verbose = verbose
         self.node_name = node_name
 
-        # set options
-        attack_keys        = config.options('labels-l2')
+        # get options
+        attack_keys        = config.options(label_section)
+        n_labels           = len(attack_keys)
+        outputs            = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
 
-        self.attacks       = dict(zip(attack_keys, range(len(attack_keys))))
-        self.n_labels      = len(self.attacks)
-        self.outputs       = [[1 if j == i else 0 for j in range(self.n_labels)] for i in range(self.n_labels)]
+        self.outputs       = dict(zip(attack_keys, outputs))
         self.force_train   = config.has_option(node_name, 'force_train')
         self.use_regressor = config.has_option(node_name, 'regressor')
         self.save_path     = config.get(node_name, 'saved-model-path')
@@ -39,15 +39,15 @@ class L2_Classifier:
             x is left untouched and should be an np.array
         '''
 
-        for i, label in enumerate(data[1]):
-            if label not in self.attacks: data[1][i] = "MALIGN"
-            data[1][i] = self.outputs[self.attacks[data[1][i]]] # choose result based on label
+        for i, label in enumerate(data[1]): # data[1] is y data (labels)
+            if label != "BENIGN": data[1][i] = "MALIGN"
+            data[1][i] = self.outputs[data[1][i]] # choose result based on label
         data[0] = np.array(data[0], dtype='float64')
         data[1] = np.array(data[1], dtype='int8')
         return data
 
 
-    def train(self, train_filename, disable_load=False, verbose=False):
+    def train(self, train_filename, disable_load=False):
         '''Create or load train model from given dataset and apply it to the test dataset
 
             If there is already a created model with the same classifier and train dataset
@@ -96,7 +96,7 @@ class L2_Classifier:
         else:
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
 
-        print_stats(y_predicted, y_test, self.n_labels, self.outputs, list(self.attacks.keys()), self.use_regressor)
+        print_stats(y_predicted, y_test, self.outputs, self.use_regressor)
 
         return y_predicted
 

@@ -53,7 +53,7 @@ TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAM
 # =====================
 
 print("\n\033[1;36m    LAYER 1\033[m")
-l1 = L1_Classifier(conf, args.verbose)
+l1 = L1_Classifier('l1', conf, 'labels-l1', args.verbose)
 l1.train(L1_TRAIN_FILE, args.disable_load)
 
 if args.verbose: print("Reading Test Dataset...")
@@ -82,7 +82,7 @@ print("\n\033[1;36m    LAYER 2\033[m")
 # output counter for l2
 output_counter = [0] * len(conf.options('labels-l2'))
 
-l2_nodes = [L2_Classifier(node_name, conf, args.verbose) for node_name in L2_NODE_NAMES]
+l2_nodes = [L2_Classifier(node_name, conf, 'labels-l2', args.verbose) for node_name in L2_NODE_NAMES]
 
 for node in range(len(l2_nodes)):
     if l2_data_count[node] != 0:

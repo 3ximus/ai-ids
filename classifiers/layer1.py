@@ -8,27 +8,28 @@ from classifier_functions import *
 class L1_Classifier:
     '''Class to train and apply layer 1 classifier/regressor models'''
 
-    def __init__(self, config, verbose=False):
-        '''Create a model object with given configuration options'''
+    def __init__(self, node_name, config, label_section, verbose=False):
+        '''Create a model object with given node_name, configuration and labels gathered from label_section in config options'''
 
         self.verbose = verbose
+        self.node_name = node_name
 
         # get options
-        attack_keys        = config.options('labels-l1')
+        attack_keys        = config.options(label_section)
+        n_labels           = len(attack_keys)
+        outputs            = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
 
-        self.attacks       = dict(zip(attack_keys, range(len(attack_keys))))
-        self.n_labels      = len(self.attacks)
-        self.outputs       = [[1 if j == i else 0 for j in range(self.n_labels)] for i in range(self.n_labels)]
-        self.force_train   = config.has_option('l1', 'force_train')
-        self.use_regressor = config.has_option('l1', 'regressor')
-        self.save_path     = config.get('l1', 'saved-model-path')
+        self.outputs       = dict(zip(attack_keys, outputs))
+        self.force_train   = config.has_option(node_name, 'force_train')
+        self.use_regressor = config.has_option(node_name, 'regressor')
+        self.save_path     = config.get(node_name, 'saved-model-path')
 
         # model settings
-        self.classifier        = config.get('l1', 'classifier')
-        self.classifier_module = config.get('l1', 'classifier-module') \
-                                    if config.has_option('l1', 'classifier-module') else None
-        self.scaler            = config.get('l1', 'scaler') if config.has_option('l1', 'scaler') else None
-        self.scaler_module     = config.get('l1', 'scaler-module') if config.has_option('l1', 'scaler-module') else None
+        self.classifier        = config.get(node_name, 'classifier')
+        self.classifier_module = config.get(node_name, 'classifier-module') \
+                                    if config.has_option(node_name, 'classifier-module') else None
+        self.scaler            = config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None
+        self.scaler_module     = config.get(node_name, 'scaler-module') if config.has_option(node_name, 'scaler-module') else None
 
         self.model = None # leave uninitialized (run self.train)
 
@@ -38,14 +39,10 @@ class L1_Classifier:
             x is left untouched and should be an np.array
         '''
 
-        y_in_encoded = []
         for i, label in enumerate(data[1]): # data[1] is y data (labels)
-            if label == "BENIGN": data[1][i] = "dos" # FIXME testing benign, we need to assign a known label
-            if label in ("ftpbruteforce", "sshbruteforce", "telnetbruteforce"): data[1][i] = "bruteforce"
-            if "dos" in label: data[1][i] = "dos"
-            y_in_encoded.append(self.outputs[self.attacks[data[1][i]]]) # choose result based on label
-        data[0] = np.array(data[0], 'float64')
-        data[1] = np.array(y_in_encoded, dtype='int8')
+            data[1][i] = self.outputs[label] # choose result based on label
+        data[0] = np.array(data[0], dtype='float64')
+        data[1] = np.array(data[1], dtype='int8')
         return data
 
 
@@ -62,7 +59,7 @@ class L1_Classifier:
         '''
         # generate model filename
         self.saved_model_file = gen_saved_model_pathname(self.save_path, train_filename, self.classifier)
-        self.saved_scaler_file = (path.dirname(self.saved_model_file) + '/scalerX_l1') if self.scaler else None
+        self.saved_scaler_file = (path.dirname(self.saved_model_file) + '/scalerX_' + self.node_name) if self.scaler else None
 
         if path.isfile(self.saved_model_file) and not disable_load and not self.force_train:
             if self.verbose: print("Loading model: %s" % self.saved_model_file)
@@ -94,11 +91,9 @@ class L1_Classifier:
             y_test = [np.argmax(x) for x in y_test]
             outputs = [np.argmax(x) for x in outputs]
         else:
-            # TODO verify why this isnt needed
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
-            pass
 
-        print_stats(y_predicted, y_test, self.n_labels, self.outputs, list(self.attacks.keys()), self.use_regressor)
+        print_stats(y_predicted, y_test, self.outputs, self.use_regressor)
 
         return y_predicted
 
