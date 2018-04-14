@@ -1,21 +1,20 @@
-#!/usr/bin/env python
 from __future__ import print_function
 import numpy as np
 from os import path
 from classifier_functions import *
 
 
-class L1_Classifier:
-    '''Class to train and apply layer 1 classifier/regressor models'''
+class NodeModel:
+    '''Class to train and apply classifier/regressor models'''
 
-    def __init__(self, node_name, config, label_section, verbose=False):
+    def __init__(self, node_name, config, verbose=False):
         '''Create a model object with given node_name, configuration and labels gathered from label_section in config options'''
 
         self.verbose = verbose
         self.node_name = node_name
 
         # get options
-        attack_keys        = config.options(label_section)
+        attack_keys        = config.options(config.get(node_name, 'labels'))
         n_labels           = len(attack_keys)
         outputs            = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
 
@@ -23,6 +22,8 @@ class L1_Classifier:
         self.force_train   = config.has_option(node_name, 'force_train')
         self.use_regressor = config.has_option(node_name, 'regressor')
         self.save_path     = config.get(node_name, 'saved-model-path')
+
+        self.label_map     = dict(config.items(config.get(node_name, 'labels-map'))) if config.has_option(node_name, 'labels-map') else dict()
 
         # model settings
         self.classifier        = config.get(node_name, 'classifier')
@@ -40,7 +41,14 @@ class L1_Classifier:
         '''
 
         for i, label in enumerate(data[1]): # data[1] is y data (labels)
-            data[1][i] = self.outputs[label] # choose result based on label
+            # try to apply label to elf.outputs, if not existent use label mapping to find valid label conversion
+            if label in self.outputs:
+                data[1][i] = self.outputs[label] # encode label into categorical ouptut classes
+            elif label in self.label_map:
+                data[1][i] = self.outputs[self.label_map[label]] # if an error ocurrs here your label conversion is wrong
+            else:
+                print("\033[1;31mERROR\033[m: Unknown label %s. Add it to correct mapping section in config file")
+                exit()
         data[0] = np.array(data[0], dtype='float64')
         data[1] = np.array(data[1], dtype='int8')
         return data
@@ -89,11 +97,12 @@ class L1_Classifier:
 
         if self.use_regressor:
             y_test = [np.argmax(x) for x in y_test]
-            outputs = [np.argmax(x) for x in outputs]
+            outputs = [np.argmax(x) for x in outputs] # FIXME
         else:
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
 
         print_stats(y_predicted, y_test, self.outputs, self.use_regressor)
 
         return y_predicted
+
 

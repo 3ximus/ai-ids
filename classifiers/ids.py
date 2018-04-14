@@ -2,8 +2,7 @@
 from __future__ import print_function
 import os, argparse, re
 import numpy as np
-from layer1 import L1_Classifier
-from layer2 import L2_Classifier
+from node_model import NodeModel
 from classifier_functions import parse_csvdataset
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
@@ -53,7 +52,7 @@ TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAM
 # =====================
 
 print("\n\033[1;36m    LAYER 1\033[m")
-l1 = L1_Classifier('l1', conf, 'labels-l1', args.verbose)
+l1 = NodeModel('l1', conf, args.verbose)
 l1.train(L1_TRAIN_FILE, args.disable_load)
 
 if args.verbose: print("Reading Test Dataset...")
@@ -62,6 +61,7 @@ y_predicted = l1.predict(test_data)
 
 # OUTPUT DATA PARTITION TO FEED LAYER 2
 
+if args.verbose: print("Filtering L1 outputs for L2...")
 l2_input_files = [open(fd, 'w') for fd in TMP_L1_OUTPUT_FILES]
 l2_data_count = [0] * len(L2_NODE_NAMES)
 with open(args.files[0],"r") as fd: # TODO dont read test data so many times #9
@@ -82,7 +82,7 @@ print("\n\033[1;36m    LAYER 2\033[m")
 # output counter for l2
 output_counter = [0] * len(conf.options('labels-l2'))
 
-l2_nodes = [L2_Classifier(node_name, conf, 'labels-l2', args.verbose) for node_name in L2_NODE_NAMES]
+l2_nodes = [NodeModel(node_name, conf, args.verbose) for node_name in L2_NODE_NAMES]
 
 for node in range(len(l2_nodes)):
     if l2_data_count[node] != 0:
