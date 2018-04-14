@@ -3,7 +3,6 @@ from __future__ import print_function
 import os, argparse, re
 import numpy as np
 from node_model import NodeModel
-from classifier_functions import parse_csvdataset
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
 
@@ -56,7 +55,7 @@ l1 = NodeModel('l1', conf, args.verbose)
 l1.train(L1_TRAIN_FILE, args.disable_load)
 
 if args.verbose: print("Reading Test Dataset...")
-test_data = parse_csvdataset(args.files[0])
+test_data = NodeModel.parse_csvdataset(args.files[0])
 y_predicted = l1.predict(test_data)
 
 # OUTPUT DATA PARTITION TO FEED LAYER 2
@@ -90,7 +89,7 @@ for node in range(len(l2_nodes)):
         l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load)
 
         if args.verbose: print("Reading Test Dataset...")
-        test_data = parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
+        test_data = NodeModel.parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
         y_predicted = l2_nodes[node].predict(test_data)
 
         for prediction in y_predicted:
