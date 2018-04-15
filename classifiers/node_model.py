@@ -1,7 +1,8 @@
 from __future__ import print_function
-import os, pickle, hashlib
+import os, pickle, hashlib, threading
 from sklearn.metrics import accuracy_score
 import numpy as np
+
 
 class NodeModel:
     '''Class to train and apply classifier/regressor models'''
@@ -32,6 +33,7 @@ class NodeModel:
                                     if config.has_option(node_name, 'classifier-module') else None
 
         self.model = None # leave uninitialized (run self.train)
+        self.stats = Stats()
 
 
     @staticmethod
@@ -127,7 +129,7 @@ class NodeModel:
 
             X_train, y_train = self.process_dataset(self.parse_csvdataset(train_filename))
             if self.use_regressor:
-                y_train = [np.argmax(x) for x in y_train]
+                y_train = np.argmax(y_train, axis=1)
 
             # scaler setup
             if self.scaler_module:
@@ -156,12 +158,7 @@ class NodeModel:
         return self.model
 
     def predict(self, test_data):
-        '''Apply a created model to given test_data and return predicted classification
-
-            Parameters
-            ----------
-            - test_data           tuple with data input and data labels
-        '''
+        '''Apply a created model to given test_data (tuple with data input and data labels) and return predicted classification'''
 
         if not self.model:
             print("ERROR: A model hasn't been trained or loaded yet. Run L1_Classifier.train")
@@ -178,41 +175,78 @@ class NodeModel:
         y_predicted = self.model.predict(X_test)
 
         if self.use_regressor:
-            y_test = [np.argmax(x) for x in y_test]
             self.outputs = {k:np.argmax(self.outputs[k]) for k in self.outputs}
         else:
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
 
-        # TODO SEPARATE CROSS VALIDATION #13
-
-        self.print_stats(y_predicted, y_test, self.outputs, self.use_regressor)
-
+        self.stats.update(y_predicted, y_test, self.outputs, self.use_regressor)
         return y_predicted
 
-    @staticmethod
-    def print_stats(y_predicted, y_test, outputs, use_regressor=False):
-        '''Print Classifier Statistics on a test dataset
+
+class Stats:
+    '''Holds stats from predictions. Can be updated multiple times to include more stats on tests with same labels'''
+
+    def __init__(self):
+        self.stats = dict()
+        self.total = 0
+        self.total_correct = 0
+        self.lock = threading.Lock()
+
+    def __len__(self):
+        return len(self.stats)
+
+    def get_label_predicted(self, label):
+        return self.stats[label][0]
+
+    def get_label_total(self, label):
+        return self.stats[label][1]
+
+    def get_total(self):
+        return self.total
+
+    def get_total_correct(self):
+        return self.total_correct
+
+    def update(self, y_predicted, y_test, outputs, use_regressor=False):
+        '''Update stats values with more results. Thread safe.
 
             Parameters
             ----------
             - y_predicted     numpy list of predict NN outputs
             - y_test          numpy list of target outputs
-            - outputs         categorical ouput classes (binary class array)
+            - outputs         dictionary where keys are labels and values are encoded outputs of each label
         '''
+        predict_uniques, predict_counts = np.unique(y_predicted, axis=0, return_counts=True)
+        test_uniques, test_counts = np.unique(y_test, axis=0, return_counts=True)
 
-        print("            Type  Predicted / TOTAL")
-        y_predicted_lst = y_predicted.tolist()
-        y_test_lst = y_test.tolist() if not use_regressor else y_test
+        if use_regressor:
+            y_test = np.argmax(y_test, axis=1)
+
         for label in outputs:
-            predict, total = y_predicted_lst.count(outputs[label]), y_test_lst.count(outputs[label])
-            color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
-            print("%s%16s     % 6d / %d\033[m" % (color, label, predict, total))
-        print('    \033[1;34m->\033[m %f%% [%d/%d]' % (accuracy_score(y_test, y_predicted, normalize=True)*100, accuracy_score(y_test, y_predicted, normalize=False) , len(y_predicted)))
+            tmp = [np.array_equal(outputs[label], x) for x in predict_uniques]
+            label_predicted = predict_counts[tmp.index(True)] if any(tmp) else 0
 
-        # TODO REMOVE THIS CODE
-        # non_desc = sum((1 for elem in y_predicted if elem.count(1) != 1))
-        # if non_desc: print("Non-descriptive output count:\033[1;33m", non_desc,"\033[mtest values")
+            tmp = [np.array_equal(outputs[label], x) for x in test_uniques]
+            label_total = test_counts[tmp.index(True)] if any(tmp) else 0
 
+            with self.lock:
+                if label not in self.stats:
+                    self.stats[label] = [label_predicted, label_total]
+                else:
+                    self.stats[label][0] += label_predicted
+                    self.stats[label][1] += label_total
+                self.total = len(y_predicted)
+                self.total_correct = accuracy_score(y_test, y_predicted, normalize=False)
 
+    def __repr__(self):
+        rep_str = "            Type  Predicted / TOTAL\n"
+        with self.lock:
+            for label in self.stats:
+                predict = self.stats[label][0]
+                total = self.stats[label][1]
+                color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
+                rep_str += "%s%16s     % 6d / %d\033[m\n" % (color, label, predict, total)
+            rep_str += '    \033[1;34m->\033[m %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total)
+        return rep_str
 
 

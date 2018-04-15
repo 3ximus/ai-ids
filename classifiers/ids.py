@@ -57,6 +57,7 @@ l1.train(L1_TRAIN_FILE, args.disable_load)
 if args.verbose: print("Reading Test Dataset...")
 test_data = NodeModel.parse_csvdataset(args.files[0])
 y_predicted = l1.predict(test_data)
+print(l1.stats)
 
 # OUTPUT DATA PARTITION TO FEED LAYER 2
 
@@ -91,6 +92,7 @@ for node in range(len(l2_nodes)):
         if args.verbose: print("Reading Test Dataset...")
         test_data = NodeModel.parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
         y_predicted = l2_nodes[node].predict(test_data)
+        print(l2_nodes[node].stats)
 
         for prediction in y_predicted:
             if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
