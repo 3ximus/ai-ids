@@ -86,6 +86,20 @@ class NodeModel:
                 y_in.append(tmp[-1]) # choose result based on label
         return [x_in, y_in]
 
+    @staticmethod
+    def yield_csvdataset(filename, n_lines):
+        '''Iterate over file in chunks of lines'''
+        x_in, y_in = [], []
+        with open(filename, 'r') as fd:
+            for i, line in enumerate(fd):
+                tmp = line.strip('\n').split(',')
+                x_in.append(tmp[1:-1])
+                y_in.append(tmp[-1]) # choose result based on label
+                if (i+1) % n_lines == 0:
+                    yield [x_in, y_in]
+                    x_in, y_in = [], []
+        yield [x_in, y_in]
+
 
     def process_dataset(self, data):
         '''Process data, where data is a list with x and y (y must be a list of labels)
@@ -171,7 +185,7 @@ class NodeModel:
             scaler = self.load_model(self.saved_scaler_file)
             X_test = scaler.transform(X_test) # normalize
 
-        if self.verbose: print("Predicting... ")
+        if self.verbose: print("Predicting on #%d samples..." % len(X_test))
         y_predicted = self.model.predict(X_test)
 
         if self.use_regressor:

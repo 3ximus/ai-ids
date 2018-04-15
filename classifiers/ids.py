@@ -90,13 +90,15 @@ for node in range(len(l2_nodes)):
         l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load)
 
         if args.verbose: print("Reading Test Dataset...")
-        test_data = NodeModel.parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
-        y_predicted = l2_nodes[node].predict(test_data)
-        print(l2_nodes[node].stats)
+        # test_data = NodeModel.parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
+        CHUNK_SIZE = 10000
+        for test_data in NodeModel.yield_csvdataset(TMP_L1_OUTPUT_FILES[node], CHUNK_SIZE):
+            y_predicted = l2_nodes[node].predict(test_data)
 
-        for prediction in y_predicted:
-            if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
-            else: output_counter[np.argmax(prediction)] += 1
+            for prediction in y_predicted:
+                if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
+                else: output_counter[np.argmax(prediction)] += 1
+        print(l2_nodes[node].stats)
 
 print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
 print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
