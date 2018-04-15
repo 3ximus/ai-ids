@@ -31,6 +31,8 @@ L1_TRAIN_FILE = conf.get('ids', 'l1')
 L2_NODE_NAMES = [op for op in conf.options('ids') if re.match('l2-.+', op)]
 L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 
+CHUNK_SIZE = conf.getint('ids', 'chunk-size')
+
 # verifiy configuration integrity
 l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
 if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
@@ -55,7 +57,7 @@ l1 = NodeModel('l1', conf, args.verbose)
 l1.train(L1_TRAIN_FILE, args.disable_load)
 
 if args.verbose: print("Reading Test Dataset...")
-test_data = NodeModel.parse_csvdataset(args.files[0])
+test_data = l1.parse_csvdataset(args.files[0])
 y_predicted = l1.predict(test_data)
 print(l1.stats)
 
@@ -90,15 +92,13 @@ for node in range(len(l2_nodes)):
         l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load)
 
         if args.verbose: print("Reading Test Dataset...")
-        # test_data = NodeModel.parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
-        CHUNK_SIZE = 10000
-        for test_data in NodeModel.yield_csvdataset(TMP_L1_OUTPUT_FILES[node], CHUNK_SIZE):
-            y_predicted = l2_nodes[node].predict(test_data)
-
-            for prediction in y_predicted:
-                if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
-                else: output_counter[np.argmax(prediction)] += 1
+        test_data = l2_nodes[node].parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
+        y_predicted = l2_nodes[node].predict(test_data)
         print(l2_nodes[node].stats)
+
+        for prediction in y_predicted:
+            if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
+            else: output_counter[np.argmax(prediction)] += 1
 
 print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
 print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))

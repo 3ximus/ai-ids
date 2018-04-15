@@ -75,49 +75,44 @@ class NodeModel:
         return base_path + '/%s-%s-%s' % (train_filename[:-4].replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
 
 
-    @staticmethod
-    def parse_csvdataset(filename):
-        '''Parse a dataset'''
+    def parse_csvdataset(self, filename):
+        '''Parse entire dataset and return processed np.array with x and y'''
         x_in, y_in = [], []
         with open(filename, 'r') as fd:
             for line in fd:
                 tmp = line.strip('\n').split(',')
                 x_in.append(tmp[1:-1])
                 y_in.append(tmp[-1]) # choose result based on label
-        return [x_in, y_in]
+        return self.process_dataset(x_in, y_in)
 
-    @staticmethod
-    def yield_csvdataset(filename, n_lines):
-        '''Iterate over file in chunks of lines'''
+    def yield_csvdataset(self, filename, n_chunks):
+        '''Iterate over dataset, yielding np.array with x and y in chunks of size n_chunks'''
         x_in, y_in = [], []
         with open(filename, 'r') as fd:
             for i, line in enumerate(fd):
                 tmp = line.strip('\n').split(',')
                 x_in.append(tmp[1:-1])
                 y_in.append(tmp[-1]) # choose result based on label
-                if (i+1) % n_lines == 0:
-                    yield [x_in, y_in]
+                if (i+1) % n_chunks == 0:
+                    yield self.process_dataset(x_in, y_in)
                     x_in, y_in = [], []
-        yield [x_in, y_in]
+        yield self.process_dataset(x_in, y_in)
 
 
-    def process_dataset(self, data):
-        '''Process data, where data is a list with x and y (y must be a list of labels)
-            x is left untouched and should be an np.array
-        '''
-
-        for i, label in enumerate(data[1]): # data[1] is y data (labels)
+    def process_dataset(self, x, y):
+        '''Process data, y must be a list of labels, returns list with both lists converted to np.array'''
+        for i, label in enumerate(y):
             # try to apply label to elf.outputs, if not existent use label mapping to find valid label conversion
             if label in self.outputs:
-                data[1][i] = self.outputs[label] # encode label into categorical ouptut classes
+                y[i] = self.outputs[label] # encode label into categorical ouptut classes
             elif label in self.label_map:
-                data[1][i] = self.outputs[self.label_map[label]] # if an error ocurrs here your label conversion is wrong
+                y[i] = self.outputs[self.label_map[label]] # if an error ocurrs here your label conversion is wrong
             else:
                 print("\033[1;31mERROR\033[m: Unknown label %s. Add it to correct mapping section in config file")
                 exit()
-        data[0] = np.array(data[0], dtype='float64')
-        data[1] = np.array(data[1], dtype='int8')
-        return data
+        x = np.array(x, dtype='float64')
+        y = np.array(y, dtype='int8')
+        return [x,y]
 
     def train(self, train_filename, disable_load=False):
         '''Create or load train model from given dataset and apply it to the test dataset
@@ -141,7 +136,7 @@ class NodeModel:
         else:
             # CREATE NEW MODEL
 
-            X_train, y_train = self.process_dataset(self.parse_csvdataset(train_filename))
+            X_train, y_train = self.parse_csvdataset(train_filename)
             if self.use_regressor:
                 y_train = np.argmax(y_train, axis=1)
 
@@ -178,7 +173,7 @@ class NodeModel:
             print("ERROR: A model hasn't been trained or loaded yet. Run L1_Classifier.train")
             exit()
 
-        X_test, y_test = self.process_dataset(test_data)
+        X_test, y_test = test_data
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
             if self.verbose: print("Loading scaler: %s" % self.saved_scaler_file)
