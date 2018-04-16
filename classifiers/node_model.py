@@ -83,7 +83,7 @@ class NodeModel:
                 tmp = line.strip('\n').split(',')
                 x_in.append(tmp[1:-1])
                 y_in.append(tmp[-1]) # choose result based on label
-        return self.process_dataset(x_in, y_in)
+        return self.process_data(x_in, y_in)
 
     def yield_csvdataset(self, filename, n_chunks):
         '''Iterate over dataset, yielding np.array with x and y in chunks of size n_chunks'''
@@ -94,25 +94,26 @@ class NodeModel:
                 x_in.append(tmp[1:-1])
                 y_in.append(tmp[-1]) # choose result based on label
                 if (i+1) % n_chunks == 0:
-                    yield self.process_dataset(x_in, y_in)
+                    yield self.process_data(x_in, y_in)
                     x_in, y_in = [], []
-        yield self.process_dataset(x_in, y_in)
+        yield self.process_data(x_in, y_in)
 
 
-    def process_dataset(self, x, y):
+    def process_data(self, x, labels):
         '''Process data, y must be a list of labels, returns list with both lists converted to np.array'''
-        for i, label in enumerate(y):
+        y = []
+        for i, label in enumerate(labels):
             # try to apply label to elf.outputs, if not existent use label mapping to find valid label conversion
             if label in self.outputs:
-                y[i] = self.outputs[label] # encode label into categorical ouptut classes
+                y.append(self.outputs[label]) # encode label into categorical ouptut classes
             elif label in self.label_map:
-                y[i] = self.outputs[self.label_map[label]] # if an error ocurrs here your label conversion is wrong
+                y.append(self.outputs[self.label_map[label]]) # if an error ocurrs here your label conversion is wrong
             else:
                 print("\033[1;31mERROR\033[m: Unknown label %s. Add it to correct mapping section in config file" %label)
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
-        return [x,y]
+        return [x, y, labels]
 
     def train(self, train_filename, disable_load=False):
         '''Create or load train model from given dataset and apply it to the test dataset
@@ -136,7 +137,7 @@ class NodeModel:
         else:
             # CREATE NEW MODEL
 
-            X_train, y_train = self.parse_csvdataset(train_filename)
+            X_train, y_train, _ = self.parse_csvdataset(train_filename)
             if self.use_regressor:
                 y_train = np.argmax(y_train, axis=1)
 
@@ -173,7 +174,7 @@ class NodeModel:
             print("ERROR: A model hasn't been trained or loaded yet. Run L1_Classifier.train")
             exit()
 
-        X_test, y_test = test_data
+        X_test, y_test, _ = test_data
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
             if self.verbose: print("Loading scaler: %s" % self.saved_scaler_file)

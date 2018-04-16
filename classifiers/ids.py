@@ -64,16 +64,12 @@ print(l1.stats)
 # OUTPUT DATA PARTITION TO FEED LAYER 2
 
 if args.verbose: print("Filtering L1 outputs for L2...")
-l2_input_files = [open(fd, 'w') for fd in TMP_L1_OUTPUT_FILES]
-l2_data_count = [0] * len(L2_NODE_NAMES)
-with open(args.files[0],"r") as fd: # TODO dont read test data so many times #9
-# write each data entry from test file to some l2 input file based on l1 prediction
-    for i, entry in enumerate(fd.read().splitlines()):
-        x = np.argmax(y_predicted[i]) # speedup
-        l2_input_files[x].write(entry + '\n')
-        l2_data_count[x] += 1
-[fd.close() for fd in l2_input_files]
 
+labels_index = np.argmax(y_predicted, axis=1)
+# ignore test_data[1] since its only used for l1 crossvalidation
+filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
+                           np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
+l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
 
 # =====================
 #       LAYER 2
@@ -87,18 +83,19 @@ output_counter = [0] * len(conf.options('labels-l2'))
 l2_nodes = [NodeModel(node_name, conf, args.verbose) for node_name in L2_NODE_NAMES]
 
 for node in range(len(l2_nodes)):
-    if l2_data_count[node] != 0:
+    if len(l2_inputs[node][0]) != 0:
         print(L2_NODE_NAMES[node])
         l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load)
 
         if args.verbose: print("Reading Test Dataset...")
-        test_data = l2_nodes[node].parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
-        y_predicted = l2_nodes[node].predict(test_data)
+        # test_data = l2_nodes[node].parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
+        y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
         print(l2_nodes[node].stats)
 
         for prediction in y_predicted:
             if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
             else: output_counter[np.argmax(prediction)] += 1
+
 
 print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
 print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
