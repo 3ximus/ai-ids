@@ -108,7 +108,7 @@ class NodeModel:
             elif label in self.label_map:
                 y[i] = self.outputs[self.label_map[label]] # if an error ocurrs here your label conversion is wrong
             else:
-                print("\033[1;31mERROR\033[m: Unknown label %s. Add it to correct mapping section in config file")
+                print("\033[1;31mERROR\033[m: Unknown label %s. Add it to correct mapping section in config file" %label)
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
