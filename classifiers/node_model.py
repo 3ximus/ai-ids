@@ -232,21 +232,22 @@ class Stats:
         if use_regressor:
             y_test = np.argmax(y_test, axis=1)
 
-        for label in outputs:
-            tmp = [np.array_equal(outputs[label], x) for x in predict_uniques]
-            label_predicted = predict_counts[tmp.index(True)] if any(tmp) else 0
+        with self.lock:
+            for label in outputs:
+                tmp = [np.array_equal(outputs[label], x) for x in predict_uniques]
+                label_predicted = predict_counts[tmp.index(True)] if any(tmp) else 0
 
-            tmp = [np.array_equal(outputs[label], x) for x in test_uniques]
-            label_total = test_counts[tmp.index(True)] if any(tmp) else 0
+                tmp = [np.array_equal(outputs[label], x) for x in test_uniques]
+                label_total = test_counts[tmp.index(True)] if any(tmp) else 0
 
-            with self.lock:
                 if label not in self.stats:
                     self.stats[label] = [label_predicted, label_total]
                 else:
                     self.stats[label][0] += label_predicted
                     self.stats[label][1] += label_total
-                self.total = len(y_predicted)
-                self.total_correct = accuracy_score(y_test, y_predicted, normalize=False)
+
+            self.total += len(y_predicted)
+            self.total_correct += accuracy_score(y_test, y_predicted, normalize=False)
 
     def __repr__(self):
         rep_str = "            Type  Predicted / TOTAL\n"

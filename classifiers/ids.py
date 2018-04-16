@@ -47,54 +47,57 @@ TMP_DIR = '/tmp/ids.py.tmp/'
 if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
 TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAMES]
 
-
-# =====================
-#       LAYER 1
-# =====================
-
-print("\n\033[1;36m    LAYER 1\033[m")
-l1 = NodeModel('l1', conf, args.verbose)
-l1.train(L1_TRAIN_FILE, args.disable_load)
-
-if args.verbose: print("Reading Test Dataset...")
-test_data = l1.parse_csvdataset(args.files[0])
-y_predicted = l1.predict(test_data)
-print(l1.stats)
-
-# OUTPUT DATA PARTITION TO FEED LAYER 2
-
-if args.verbose: print("Filtering L1 outputs for L2...")
-
-labels_index = np.argmax(y_predicted, axis=1)
-# ignore test_data[1] since its only used for l1 crossvalidation
-filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
-                           np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
-l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-
-# =====================
-#       LAYER 2
-# =====================
-
-print("\n\033[1;36m    LAYER 2\033[m")
-
 # output counter for l2
 output_counter = [0] * len(conf.options('labels-l2'))
 
+# =====================
+#   CREATE AND TRAIN
+# =====================
+
+# LAYER 1
+l1 = NodeModel('l1', conf, args.verbose)
+l1.train(L1_TRAIN_FILE, args.disable_load)
+
+# LAYER 2
 l2_nodes = [NodeModel(node_name, conf, args.verbose) for node_name in L2_NODE_NAMES]
+[l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load) for node in range(len(l2_nodes))]
 
+# =====================
+#     TEST DATA
+# =====================
+
+if args.verbose: print("Reading Test Dataset...")
+for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE):
+    # LAYER 1
+    y_predicted = l1.predict(test_data)
+
+    # OUTPUT DATA PARTITION TO FEED LAYER 2
+    if args.verbose: print("Filtering L1 outputs for L2...")
+    labels_index = np.argmax(y_predicted, axis=1)
+    # ignore test_data[1] since its only used for l1 crossvalidation
+    filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
+                               np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
+    l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
+
+    # LAYER 2
+    for node in range(len(l2_nodes)):
+        if len(l2_inputs[node][0]) != 0:
+            if args.verbose: print("Reading Test Dataset...")
+            y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
+
+            for prediction in y_predicted:
+                if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
+                else: output_counter[np.argmax(prediction)] += 1
+    # WAIT FOR X THREADS
+
+
+print("\033[1;36m    LAYER 1\033[m")
+print(l1.stats)
+print("\033[1;36m    LAYER 2\033[m")
 for node in range(len(l2_nodes)):
-    if len(l2_inputs[node][0]) != 0:
+    if l2_nodes[node].stats.total > 0:
         print(L2_NODE_NAMES[node])
-        l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load)
-
-        if args.verbose: print("Reading Test Dataset...")
-        # test_data = l2_nodes[node].parse_csvdataset(TMP_L1_OUTPUT_FILES[node])
-        y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
         print(l2_nodes[node].stats)
-
-        for prediction in y_predicted:
-            if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
-            else: output_counter[np.argmax(prediction)] += 1
 
 
 print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
