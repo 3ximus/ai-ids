@@ -3,6 +3,8 @@ from __future__ import print_function
 import os, argparse, re
 import numpy as np
 from node_model import NodeModel
+import threading
+import time
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
 
@@ -16,6 +18,25 @@ op.add_argument('-d', '--disable-load', action='store_true', help="disable loadi
 op.add_argument('-v', '--verbose', action='store_true', help="verbose output", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default=os.path.dirname(__file__) + '/options.cfg')
 args = op.parse_args()
+lock = threading.Lock()
+
+def predict_chunk(test_data):
+    # LAYER 1
+    y_predicted = l1.predict(test_data)
+
+    # OUTPUT DATA PARTITION TO FEED LAYER 2
+    if args.verbose: print("Filtering L1 outputs for L2...")
+    labels_index = np.argmax(y_predicted, axis=1)
+    # ignore test_data[1] since its only used for l1 crossvalidation
+    filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
+                               np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
+    l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
+
+    # LAYER 2
+    for node in range(len(l2_nodes)):
+        if len(l2_inputs[node][0]) != 0:
+            if args.verbose: print("Reading Test Dataset...")
+            y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
 
 # =====================
 #    CONFIGURATION
@@ -47,9 +68,6 @@ TMP_DIR = '/tmp/ids.py.tmp/'
 if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
 TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAMES]
 
-# output counter for l2
-output_counter = [0] * len(conf.options('labels-l2'))
-
 # =====================
 #   CREATE AND TRAIN
 # =====================
@@ -67,35 +85,33 @@ l2_nodes = [NodeModel(node_name, conf, args.verbose) for node_name in L2_NODE_NA
 # =====================
 
 if args.verbose: print("Reading Test Dataset...")
+
 for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE):
-    # LAYER 1
-    y_predicted = l1.predict(test_data)
+	while threading.active_count()>10:
+		time.sleep(5)
+	if(threading.active_count()<=10):
+		thread = threading.Thread(target=predict_chunk,args=(test_data,))
+		thread.start()
 
-    # OUTPUT DATA PARTITION TO FEED LAYER 2
-    if args.verbose: print("Filtering L1 outputs for L2...")
-    labels_index = np.argmax(y_predicted, axis=1)
-    # ignore test_data[1] since its only used for l1 crossvalidation
-    filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
-                               np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
-    l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
 
-    # LAYER 2
-    for node in range(len(l2_nodes)):
-        if len(l2_inputs[node][0]) != 0:
-            if args.verbose: print("Reading Test Dataset...")
-            y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
+for t in threading.enumerate():
+	print(t.getName())
+	if t.getName()!="MainThread":
+		t.join()
 
-            for prediction in y_predicted:
-                if conf.has_option(L2_NODE_NAMES[node], 'regressor'): output_counter[prediction] += 1
-                else: output_counter[np.argmax(prediction)] += 1
-    # WAIT FOR X THREADS
 
+
+# output counter for l2
+output_counter = [0] * len(conf.options('labels-l2'))
 
 print("\033[1;36m    LAYER 1\033[m")
 print(l1.stats)
 print("\033[1;36m    LAYER 2\033[m")
+
 for node in range(len(l2_nodes)):
     if l2_nodes[node].stats.total > 0:
+    	output_counter[0] += l2_nodes[node].stats.get_label_predicted("BENIGN")
+    	output_counter[1] += l2_nodes[node].stats.get_label_predicted("MALIGN")
         print(L2_NODE_NAMES[node])
         print(l2_nodes[node].stats)
 
