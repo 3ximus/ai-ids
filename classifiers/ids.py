@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import os, argparse, re
+import os, argparse, re, curses
 import numpy as np
 from node_model import NodeModel
 import threading
@@ -18,28 +18,6 @@ op.add_argument('-d', '--disable-load', action='store_true', help="disable loadi
 op.add_argument('-v', '--verbose', action='store_true', help="verbose output", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default=os.path.dirname(__file__) + '/options.cfg')
 args = op.parse_args()
-maxconnections=10
-pool_sema = threading.BoundedSemaphore(value=maxconnections)
-
-def predict_chunk(test_data):
-    pool_sema.acquire()
-    # LAYER 1
-    y_predicted = l1.predict(test_data)
-
-    # OUTPUT DATA PARTITION TO FEED LAYER 2
-    if args.verbose: print("Filtering L1 outputs for L2...")
-    labels_index = np.argmax(y_predicted, axis=1)
-    # ignore test_data[1] since its only used for l1 crossvalidation
-    filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
-                               np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
-    l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-
-    # LAYER 2
-    for node in range(len(l2_nodes)):
-        if len(l2_inputs[node][0]) != 0:
-            if args.verbose: print("Reading Test Dataset...")
-            y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
-    pool_sema.release()
 
 # =====================
 #    CONFIGURATION
@@ -56,6 +34,7 @@ L2_NODE_NAMES = [op for op in conf.options('ids') if re.match('l2-.+', op)]
 L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 
 CHUNK_SIZE = conf.getint('ids', 'chunk-size')
+MAX_THREADS = conf.getint('ids', 'max-threads')
 
 # verifiy configuration integrity
 l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
@@ -76,32 +55,91 @@ TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAM
 # =====================
 
 # LAYER 1
-l1 = NodeModel('l1', conf, args.verbose)
+l1 = NodeModel('l1', conf, verbose=args.verbose)
 l1.train(L1_TRAIN_FILE, args.disable_load)
 
 # LAYER 2
-l2_nodes = [NodeModel(node_name, conf, args.verbose) for node_name in L2_NODE_NAMES]
+l2_nodes = [NodeModel(node_name, conf, verbose=args.verbose) for node_name in L2_NODE_NAMES]
 [l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load) for node in range(len(l2_nodes))]
 
 # =====================
-#     TEST DATA
+#   THREAD TEST CHUNK
 # =====================
 
-if args.verbose: print("Reading Test Dataset...")
+def print_curses_stats(): # meant to be used inside each thread to update its results
+    with curses_lock:
+        stdscr.addstr(os.path.basename(args.files[0]) + "\n")
+        stdscr.addstr("    LAYER 1\n", curses.color_pair(7) | curses.A_BOLD)
+        l1.stats.update_curses_screen(stdscr, curses)
+        if any([node.stats.total for node in l2_nodes]):
+            stdscr.addstr("    LAYER 2\n", curses.color_pair(7) | curses.A_BOLD)
+        for node in range(len(l2_nodes)):
+            if l2_nodes[node].stats.total > 0:
+                stdscr.addstr(L2_NODE_NAMES[node])
+                l2_nodes[node].stats.update_curses_screen(stdscr, curses)
+        stdscr.refresh()
+        stdscr.clear()
 
-for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE):
-	thread = threading.Thread(target=predict_chunk,args=(test_data,))
-	thread.start()
+def predict_chunk(test_data):
+    thread_semaphore.acquire()
+    # LAYER 1
+    y_predicted = l1.predict(test_data)
 
+    # OUTPUT DATA PARTITION TO FEED LAYER 2
+    if args.verbose: print("Filtering L1 outputs for L2...")
+    labels_index = np.argmax(y_predicted, axis=1)
+    # ignore test_data[1] since its only used for l1 crossvalidation
+    filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
+                               np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
+    l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
+    print_curses_stats()
 
-for t in threading.enumerate():
-	if t.getName()!="MainThread":
-		t.join()
+    # LAYER 2
+    for node in range(len(l2_nodes)):
+        if len(l2_inputs[node][0]) != 0:
+            if args.verbose: print("Reading Test Dataset...")
+            y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
+        print_curses_stats()
+    thread_semaphore.release()
 
+# =====================
+#  LAUNCH TEST THREADS
+# =====================
 
+stdscr = curses.initscr()
+curses.noecho()
+curses.cbreak()
+
+# Start colors in curses
+curses.start_color()
+curses.use_default_colors()
+for i in range(0, curses.COLORS):
+    curses.init_pair(i + 1, i, -1)
+
+curses_lock = threading.Lock()
+thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
+
+try:
+    if args.verbose: print("Reading Test Dataset in chunks...")
+    for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE): # launch threads
+        thread = threading.Thread(target=predict_chunk,args=(test_data,))
+        thread.start()
+
+    for t in threading.enumerate(): # wait for the remaining threads
+        if t.getName()!="MainThread":
+            t.join()
+finally:
+    curses.echo()
+    curses.nocbreak()
+    curses.endwin()
 
 # output counter for l2
 output_counter = [0] * len(conf.options('labels-l2'))
+
+# =====================
+#   PRINT FINAL STATS
+# ====================j
+
 
 print("\033[1;36m    LAYER 1\033[m")
 print(l1.stats)
@@ -109,8 +147,8 @@ print("\033[1;36m    LAYER 2\033[m")
 
 for node in range(len(l2_nodes)):
     if l2_nodes[node].stats.total > 0:
-    	output_counter[0] += l2_nodes[node].stats.get_label_predicted("BENIGN")
-    	output_counter[1] += l2_nodes[node].stats.get_label_predicted("MALIGN")
+        output_counter[0] += l2_nodes[node].stats.get_label_predicted("BENIGN")
+        output_counter[1] += l2_nodes[node].stats.get_label_predicted("MALIGN")
         print(L2_NODE_NAMES[node])
         print(l2_nodes[node].stats)
 

@@ -249,7 +249,7 @@ class Stats:
             self.total += len(y_predicted)
             self.total_correct += accuracy_score(y_test, y_predicted, normalize=False)
 
-    def __repr__(self):
+    def __repr__(self): # USE color_type 1 to use curses color
         rep_str = "            Type  Predicted / TOTAL\n"
         with self.lock:
             for label in self.stats:
@@ -259,5 +259,16 @@ class Stats:
                 rep_str += "%s%16s     % 6d / %d\033[m\n" % (color, label, predict, total)
             rep_str += '    \033[1;34m->\033[m %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total)
         return rep_str
+
+    def update_curses_screen(self, curses_screen, curses):
+        with self.lock:
+            curses_screen.addstr("            Type  Predicted / TOTAL\n")
+            for label in self.stats:
+                predict = self.stats[label][0]
+                total = self.stats[label][1]
+                color = curses.color_pair(2) if predict == total == 0 else curses.color_pair(2 if predict > total else 3)
+                curses_screen.addstr("%16s     % 6d / %d\n" % (label, predict, total), color | curses.A_BOLD)
+            curses_screen.addstr('    -> %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total))
+
 
 
