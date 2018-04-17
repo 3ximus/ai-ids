@@ -4,29 +4,29 @@ shopt -s extglob
 
 NN2_EXTRACTED_TRAIN="csv/extracted/train"
 directory="csv/train/layer2"
-[[ -d  "$directory" ]] || mkdir -p "$directory"
-find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
+#find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
 
 echo "Compacting Malign flows..."	# obtained from static dirs ${NN2_EXTRACTED_TRAIN}/*
 
 #bruteforce
-python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/bruteforce/*.csv "${directory}" -f "scripts/features/all.txt"
-cat $directory/tekever-*patator.csv > $directory/tekever-bruteforce.csv
-rm $directory/tekever-*patator.csv
+#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/bruteforce/*.csv "$directory/tekever-bruteforce.csv" -f "scripts/features/all.txt"
 
-#dos
-python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/dos/*.csv "${directory}" -f "scripts/features/all.txt"
-cat $directory/tekever-dos-*.csv > $directory/tekever-dos.csv
-rm $directory/tekever-dos-*.csv
+#fastdos
+# python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/fastdos/*.csv "$directory/tekever-fastdos.csv" -f "scripts/features/all.txt"
 
 #portscan
-python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "${directory}" -f "scripts/features/all.txt"
-head -n 60000 ${directory}/tekever-portscan.csv > ${directory}/tekever-portscan.csv.tmp
-mv ${directory}/tekever-portscan.csv.tmp ${directory}/tekever-portscan.csv
+# python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "$directory/tekever-portscan.csv.tmp" -f "scripts/features/all.txt"
+# head -n 60000 "${directory}/tekever-portscan.csv.tmp" > "$directory/tekever-portscan.csv"
+
+#slowdos
+head -n 1 csv/base/Wednesday-workingHours.pcap_ISCX.csv | tee ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowloris.csv ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowhttptest.csv > /dev/null
+grep "slowloris" csv/base/Wednesday-workingHours.pcap_ISCX.csv >> ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowloris.csv
+grep "slowhttptest" csv/base/Wednesday-workingHours.pcap_ISCX.csv >> ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowhttptest.csv
+python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/slowdos/*.csv "$directory/base-slowdos.csv" -f "scripts/features/all.txt"
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign
-[[ -f $TMP_FILE ]] || python scripts/compact_flows.py csv/base/cicfl_used_format/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
+[[ -f $TMP_FILE ]] || python scripts/compact_flows.py csv/base/*.csv $TMP_FILE --benign -f "scripts/features/all.txt"
 
 echo "Shuffling..."
 for file in ${directory}/*.csv; do

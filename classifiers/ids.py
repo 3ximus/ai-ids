@@ -92,14 +92,14 @@ def predict_chunk(test_data):
     filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
     l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-    print_curses_stats()
+    #print_curses_stats()
 
     # LAYER 2
     for node in range(len(l2_nodes)):
         if len(l2_inputs[node][0]) != 0:
             if args.verbose: print("Reading Test Dataset...")
             y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
-        print_curses_stats()
+        #print_curses_stats()
     thread_semaphore.release()
 
 # =====================
