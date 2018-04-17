@@ -32,8 +32,8 @@ if not path.isfile(args.features):
 FEATURES_LIST = open(args.features, 'r').read().splitlines()
 KNOWN_LABELS = {"(ftp.?(patator|bruteforce)|ssh.?(patator|bruteforce)|telnet.?(patator|bruteforce))": "bruteforce",
                 "bot": "bot", "infiltration": "infiltration", "portscan": "portscan",
-                "heartbleed": "heartbleed", "(dos.?hulk|dos.?goldeneye)": "dos",
-                "dos.?slowloris": "dosslowloris", "dos.?slowhttptest": "dosslowhttptest", "ddos": "ddos",
+                "heartbleed": "heartbleed", "hulk":"doshulk", "dosgoldeneye": "dosgoldeneye",
+                "slowloris": "slowloris", "slowhttptest": "slowhttptest", "ddos": "ddos",
                 "benign": "BENIGN"}
 
 if path.isdir(args.files[-1]): # directory output, process files separately
