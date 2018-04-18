@@ -14,6 +14,7 @@ except ImportError: import ConfigParser as configparser # for python2
 
 op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
 op.add_argument('files', metavar='file', nargs='+', help='csv file with all features to test')
+op.add_argument('-s', '--select', nargs='+', help='select on layer/node to test from config file')
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
 op.add_argument('-v', '--verbose', action='store_true', help="verbose output. Disables curses interface", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default=os.path.dirname(__file__) + '/options.cfg')
@@ -144,7 +145,6 @@ for node in range(len(l2_nodes)):
         output_counter[1] += l2_nodes[node].stats.get_label_predicted("MALIGN")
         print(L2_NODE_NAMES[node])
         print(l2_nodes[node].stats)
-
 
 print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
 print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))

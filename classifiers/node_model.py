@@ -12,6 +12,7 @@ class NodeModel:
 
         self.verbose = verbose
         self.node_name = node_name
+        self.message_buffer = [] # buffer for error messages
 
         # get options
         attack_keys        = config.options(config.get(node_name, 'labels'))
@@ -33,7 +34,7 @@ class NodeModel:
                                     if config.has_option(node_name, 'classifier-module') else None
 
         self.model = None # leave uninitialized (run self.train)
-        self.stats = Stats()
+        self.stats = Stats(self)
 
 
     @staticmethod
@@ -59,7 +60,9 @@ class NodeModel:
 
     def log(self, m_type, message, force_log=False):
         if self.verbose or force_log:
-            print('%s %15s [%s]: %s' % (m_type, self.node_name, threading.current_thread().getName(), message))
+            print('%s %13s [%s]: %s' % (m_type, self.node_name, threading.current_thread().getName(), message))
+        if m_type == MessageType.error:
+            self.message_buffer.append('%13s [%s]: %s' % (self.node_name, threading.current_thread().getName(), message))
 
     @staticmethod
     def gen_saved_model_pathname(base_path, train_filename, classifier_settings):
@@ -159,7 +162,7 @@ class NodeModel:
             self.model = eval(self.classifier)
 
             # train and save the model
-            self.log("Training %s..." % self.node_name, force_log=True)
+            self.log("Training %s" % self.node_name, force_log=True)
             try:
                 self.model.fit(X_train, y_train)
             except ValueError as err:
@@ -179,10 +182,18 @@ class NodeModel:
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
             scaler = self.load_model(self.saved_scaler_file)
-            X_test = scaler.transform(X_test) # normalize
+            try:
+                X_test = scaler.transform(X_test) # normalize
+            except ValueError as e:
+                self.log(MessageType.error, 'Transforming with scaler\n'+ str(e))
+                exit()
 
-        self.log(MessageType.log, "Predicting on #%d samples..." % len(X_test))
-        y_predicted = self.model.predict(X_test)
+        self.log(MessageType.log, "Predicting on #%d samples" % len(X_test))
+        try:
+            y_predicted = self.model.predict(X_test)
+        except ValueError as e:
+            self.log(MessageType.error, 'Predicting\n'+ str(e))
+            exit()
 
         if self.use_regressor:
             self.outputs = {k:np.argmax(self.outputs[k]) for k in self.outputs}
@@ -195,7 +206,8 @@ class NodeModel:
 class Stats:
     '''Holds stats from predictions. Can be updated multiple times to include more stats on tests with same labels'''
 
-    def __init__(self):
+    def __init__(self, node):
+        self.node = node
         self.stats = dict()
         self.total = 0
         self.total_correct = 0
@@ -257,6 +269,8 @@ class Stats:
                 color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
                 rep_str += "%s%16s     % 6d / %d\033[m\n" % (color, label, predict, total)
             rep_str += '    \033[1;34m->\033[m %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total)
+            for err_msg in self.node.message_buffer:
+                rep_str += '[\033[1;31mERROR\033[m]%s\n'%err_msg
         return rep_str
 
     def update_curses_screen(self, curses_screen, curses):
@@ -268,9 +282,13 @@ class Stats:
                 color = curses.color_pair(2) if predict == total == 0 else curses.color_pair(2 if predict > total else 3)
                 curses_screen.addstr("%16s     % 6d / %d\n" % (label, predict, total), color | curses.A_BOLD)
             curses_screen.addstr('    -> %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total))
+            for err_msg in self.node.message_buffer:
+                curses_screen.addstr('[')
+                curses_screen.addstr('ERROR', curses.color_pair(2) | curses.A_BOLD)
+                curses_screen.addstr(']%s\n' + err_msg)
 
 class MessageType:
-    error = '[\033[1;31m ERROR \033[m]'
+    error = '[\033[1;31mERROR\033[m]'
     warning = '[\033[1;33mWARNING\033[m]'
-    log = '[\033[1;34m  LOG  \033[m]'
+    log = '[\033[1;34m LOG \033[m]'
 
