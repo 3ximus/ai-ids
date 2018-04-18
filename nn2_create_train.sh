@@ -12,17 +12,11 @@ echo "Compacting Malign flows..."	# obtained from static dirs ${NN2_EXTRACTED_TR
 #python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/bruteforce/*.csv "$directory/tekever-bruteforce.csv" -f "scripts/features/all.txt"
 
 #fastdos
-# python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/fastdos/*.csv "$directory/tekever-fastdos.csv" -f "scripts/features/all.txt"
+#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/fastdos/*.csv "$directory/tekever-fastdos.csv" -f "scripts/features/all.txt"
 
 #portscan
-# python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "$directory/tekever-portscan.csv.tmp" -f "scripts/features/all.txt"
-# head -n 60000 "${directory}/tekever-portscan.csv.tmp" > "$directory/tekever-portscan.csv"
-
-#slowdos
-head -n 1 csv/base/Wednesday-workingHours.pcap_ISCX.csv | tee ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowloris.csv ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowhttptest.csv > /dev/null
-grep "slowloris" csv/base/Wednesday-workingHours.pcap_ISCX.csv >> ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowloris.csv
-grep "slowhttptest" csv/base/Wednesday-workingHours.pcap_ISCX.csv >> ${NN2_EXTRACTED_TRAIN}/slowdos/base-slowhttptest.csv
-python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/slowdos/*.csv "$directory/base-slowdos.csv" -f "scripts/features/all.txt"
+#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "$directory/tekever-portscan.csv.tmp" -f "scripts/features/all.txt"
+#head -n 60000 "${directory}/tekever-portscan.csv.tmp" > "$directory/tekever-portscan.csv"
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign

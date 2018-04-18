@@ -84,7 +84,7 @@ def predict_chunk(test_data):
     thread_semaphore.acquire()
     # LAYER 1
     y_predicted = l1.predict(test_data)
-
+    
     # OUTPUT DATA PARTITION TO FEED LAYER 2
     if args.verbose: print("Filtering L1 outputs for L2...")
     labels_index = np.argmax(y_predicted, axis=1)
@@ -92,14 +92,14 @@ def predict_chunk(test_data):
     filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
     l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-    #print_curses_stats()
+    print_curses_stats()
 
     # LAYER 2
     for node in range(len(l2_nodes)):
         if len(l2_inputs[node][0]) != 0:
             if args.verbose: print("Reading Test Dataset...")
             y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
-        #print_curses_stats()
+        print_curses_stats()
     thread_semaphore.release()
 
 # =====================
@@ -140,11 +140,12 @@ output_counter = [0] * len(conf.options('labels-l2'))
 #   PRINT FINAL STATS
 # ====================j
 
+print(os.path.basename(args.files[0]))
 
 print("\033[1;36m    LAYER 1\033[m")
 print(l1.stats)
-print("\033[1;36m    LAYER 2\033[m")
 
+print("\033[1;36m    LAYER 2\033[m")
 for node in range(len(l2_nodes)):
     if l2_nodes[node].stats.total > 0:
         output_counter[0] += l2_nodes[node].stats.get_label_predicted("BENIGN")

@@ -188,10 +188,6 @@ class NodeModel:
             self.outputs = {k:np.argmax(self.outputs[k]) for k in self.outputs}
         else:
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
-        non_descriptive_outputs = [0]*len(self.outputs)
-        test_data[2] = [test_data[2][i] for i,y in enumerate(y_predicted) if (y!=non_descriptive_outputs).any()]
-        y_test = np.array([y_test[i] for i,y in enumerate(y_predicted) if (y!=non_descriptive_outputs).any()])
-        y_predicted = np.array([y for y in y_predicted if (y!=non_descriptive_outputs).any()])
         self.stats.update(y_predicted, y_test, self.outputs, self.use_regressor)
         return y_predicted
 
