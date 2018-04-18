@@ -32,7 +32,7 @@ if not path.isfile(args.features):
 FEATURES_LIST = open(args.features, 'r').read().splitlines()
 KNOWN_LABELS = {"(ftp.?(patator|bruteforce)|ssh.?(patator|bruteforce)|telnet.?(patator|bruteforce))": "bruteforce",
                 "bot": "bot", "infiltration": "infiltration", "portscan": "portscan",
-                "heartbleed": "heartbleed", "hulk":"doshulk", "dosgoldeneye": "dosgoldeneye",
+                "heartbleed": "heartbleed", "hulk":"doshulk", "goldeneye": "dosgoldeneye",
                 "slowloris": "slowloris", "slowhttptest": "slowhttptest", "ddos": "ddos",
                 "benign": "BENIGN"}
 

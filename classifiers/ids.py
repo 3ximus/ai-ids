@@ -15,7 +15,7 @@ except ImportError: import ConfigParser as configparser # for python2
 op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
 op.add_argument('files', metavar='file', nargs='+', help='csv file with all features to test')
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
-op.add_argument('-v', '--verbose', action='store_true', help="verbose output", dest='verbose')
+op.add_argument('-v', '--verbose', action='store_true', help="verbose output. Disables curses interface", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default=os.path.dirname(__file__) + '/options.cfg')
 args = op.parse_args()
 
@@ -45,11 +45,6 @@ if not all([(item[0] == item[1][item[1].find('-')+1:] == item[2][item[2].find('-
     print("Names of l1 output labels do not match l2 node names in config file %s" % args.config_file)
     exit()
 
-# setup temp directory and l1 output / l2 input files
-TMP_DIR = '/tmp/ids.py.tmp/'
-if not os.path.isdir(TMP_DIR): os.makedirs(TMP_DIR)
-TMP_L1_OUTPUT_FILES = [TMP_DIR + out_label + ".csv" for out_label in L2_NODE_NAMES]
-
 # =====================
 #   CREATE AND TRAIN
 # =====================
@@ -75,7 +70,7 @@ def print_curses_stats(): # meant to be used inside each thread to update its re
             stdscr.addstr("    LAYER 2\n", curses.color_pair(7) | curses.A_BOLD)
         for node in range(len(l2_nodes)):
             if l2_nodes[node].stats.total > 0:
-                stdscr.addstr(L2_NODE_NAMES[node])
+                stdscr.addstr(L2_NODE_NAMES[node]+'\n')
                 l2_nodes[node].stats.update_curses_screen(stdscr, curses)
         stdscr.refresh()
         stdscr.clear()
@@ -84,39 +79,38 @@ def predict_chunk(test_data):
     thread_semaphore.acquire()
     # LAYER 1
     y_predicted = l1.predict(test_data)
-    
+
     # OUTPUT DATA PARTITION TO FEED LAYER 2
-    if args.verbose: print("Filtering L1 outputs for L2...")
     labels_index = np.argmax(y_predicted, axis=1)
     # ignore test_data[1] since its only used for l1 crossvalidation
     filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
     l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-    print_curses_stats()
+    if not args.verbose: print_curses_stats()
 
     # LAYER 2
     for node in range(len(l2_nodes)):
         if len(l2_inputs[node][0]) != 0:
-            if args.verbose: print("Reading Test Dataset...")
             y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
-        print_curses_stats()
+        if not args.verbose: print_curses_stats()
     thread_semaphore.release()
 
 # =====================
 #  LAUNCH TEST THREADS
 # =====================
 
-stdscr = curses.initscr()
-curses.noecho()
-curses.cbreak()
+if not args.verbose:
+    stdscr = curses.initscr()
+    curses.noecho()
+    curses.cbreak()
 
 # Start colors in curses
-curses.start_color()
-curses.use_default_colors()
-for i in range(0, curses.COLORS):
-    curses.init_pair(i + 1, i, -1)
+    curses.start_color()
+    curses.use_default_colors()
+    for i in range(0, curses.COLORS):
+        curses.init_pair(i + 1, i, -1)
+    curses_lock = threading.Lock()
 
-curses_lock = threading.Lock()
 thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
 
 try:
@@ -129,23 +123,21 @@ try:
         if t.getName()!="MainThread":
             t.join()
 finally:
-    curses.echo()
-    curses.nocbreak()
-    curses.endwin()
-
-# output counter for l2
-output_counter = [0] * len(conf.options('labels-l2'))
+    if not args.verbose:
+        curses.echo()
+        curses.nocbreak()
+        curses.endwin()
 
 # =====================
 #   PRINT FINAL STATS
 # ====================j
 
 print(os.path.basename(args.files[0]))
-
 print("\033[1;36m    LAYER 1\033[m")
 print(l1.stats)
-
 print("\033[1;36m    LAYER 2\033[m")
+# output counter for l2
+output_counter = [0] * len(conf.options('labels-l2'))
 for node in range(len(l2_nodes)):
     if l2_nodes[node].stats.total > 0:
         output_counter[0] += l2_nodes[node].stats.get_label_predicted("BENIGN")

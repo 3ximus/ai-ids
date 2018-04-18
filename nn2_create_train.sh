@@ -4,19 +4,19 @@ shopt -s extglob
 
 NN2_EXTRACTED_TRAIN="csv/extracted/train"
 directory="csv/train/layer2"
-#find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
+find "$directory" -maxdepth 1 -type f  -exec rm '{}' \;
 
 echo "Compacting Malign flows..."	# obtained from static dirs ${NN2_EXTRACTED_TRAIN}/*
 
 #bruteforce
-#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/bruteforce/*.csv "$directory/tekever-bruteforce.csv" -f "scripts/features/all.txt"
+python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/bruteforce/*.csv "$directory/tekever-bruteforce.csv" -f "scripts/features/all.txt"
 
 #fastdos
-#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/fastdos/*.csv "$directory/tekever-fastdos.csv" -f "scripts/features/all.txt"
+python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/fastdos/*.csv "$directory/tekever-fastdos.csv" -f "scripts/features/all.txt"
 
 #portscan
-#python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "$directory/tekever-portscan.csv.tmp" -f "scripts/features/all.txt"
-#head -n 60000 "${directory}/tekever-portscan.csv.tmp" > "$directory/tekever-portscan.csv"
+python scripts/compact_flows.py ${NN2_EXTRACTED_TRAIN}/portscan/tekever-portscan.csv "$directory/tekever-portscan.csv.tmp" -f "scripts/features/all.txt"
+head -n 60000 "${directory}/tekever-portscan.csv.tmp" > "$directory/tekever-portscan.csv"
 
 echo "Filtering BENIGN..."
 TMP_FILE=/tmp/compacted-benign

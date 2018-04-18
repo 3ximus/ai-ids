@@ -50,12 +50,16 @@ class NodeModel:
     def load_model(filename):
         '''Load the model from disk'''
         if not os.path.isfile(filename):
-            print("File %s does not exist." % filename)
+            self.log(MessageType.error, "File %s does not exist." % filename)
             exit()
         model_file = open(filename, 'rb')
         loaded_model = pickle.load(model_file)
         model_file.close()
         return loaded_model
+
+    def log(self, m_type, message, force_log=False):
+        if self.verbose or force_log:
+            print('%s %15s [%s]: %s' % (m_type, self.node_name, threading.current_thread().getName(), message))
 
     @staticmethod
     def gen_saved_model_pathname(base_path, train_filename, classifier_settings):
@@ -109,7 +113,7 @@ class NodeModel:
             elif label in self.label_map:
                 y.append(self.outputs[self.label_map[label]]) # if an error ocurrs here your label conversion is wrong
             else:
-                print("\033[1;31mERROR\033[m: Unknown label %s. Add it to correct mapping section in config file" %label)
+                self.log(MessageType.error, "Unknown label %s. Add it to correct mapping section in config file" %label)
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
@@ -132,7 +136,7 @@ class NodeModel:
 
         if os.path.isfile(self.saved_model_file) and not disable_load and not self.force_train:
             # LOAD MODEL
-            if self.verbose: print("Loading model: %s" % self.saved_model_file)
+            self.log(MessageType.log, "Loading model: %s" % os.path.basename(self.saved_model_file))
             self.model = self.load_model(self.saved_model_file)
         else:
             # CREATE NEW MODEL
@@ -145,7 +149,6 @@ class NodeModel:
             if self.scaler_module:
                 exec('import '+ self.scaler_module) # import scaler module
             if self.scaler:
-                if self.verbose: print("Using scaler... ")
                 scaler = eval(self.scaler).fit(X_train)
                 X_train = scaler.transform(X_train)    # normalize
                 self.save_model(self.saved_scaler_file, scaler)
@@ -156,13 +159,11 @@ class NodeModel:
             self.model = eval(self.classifier)
 
             # train and save the model
-            if self.verbose: print("Training... ")
+            self.log("Training %s..." % self.node_name, force_log=True)
             try:
                 self.model.fit(X_train, y_train)
             except ValueError as err:
-                print("\n\033[1;31mERROR\033[m: Problem found when training model in L2.")
-                print("This classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % model)
-                print("ValueError:", err)
+                self.log(MessageType.error, "Problem found when training model, this classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % model)
                 exit()
             self.save_model(self.saved_model_file, self.model)
         return self.model
@@ -171,17 +172,16 @@ class NodeModel:
         '''Apply a created model to given test_data (tuple with data input and data labels) and return predicted classification'''
 
         if not self.model:
-            print("ERROR: A model hasn't been trained or loaded yet. Run L1_Classifier.train")
+            self.log(MessageType.error, "ERROR: A model hasn't been trained or loaded yet for %s. Run NodeModel.train" % seld.node_name)
             exit()
 
         X_test, y_test, _ = test_data
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
-            if self.verbose: print("Loading scaler: %s" % self.saved_scaler_file)
             scaler = self.load_model(self.saved_scaler_file)
             X_test = scaler.transform(X_test) # normalize
 
-        if self.verbose: print("Predicting on #%d samples..." % len(X_test))
+        self.log(MessageType.log, "Predicting on #%d samples..." % len(X_test))
         y_predicted = self.model.predict(X_test)
 
         if self.use_regressor:
@@ -248,7 +248,7 @@ class Stats:
             self.total += len(y_predicted)
             self.total_correct += accuracy_score(y_test, y_predicted, normalize=False)
 
-    def __repr__(self): # USE color_type 1 to use curses color
+    def __repr__(self):
         rep_str = "            Type  Predicted / TOTAL\n"
         with self.lock:
             for label in self.stats:
@@ -269,5 +269,8 @@ class Stats:
                 curses_screen.addstr("%16s     % 6d / %d\n" % (label, predict, total), color | curses.A_BOLD)
             curses_screen.addstr('    -> %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total))
 
-
+class MessageType:
+    error = '[\033[1;31m ERROR \033[m]'
+    warning = '[\033[1;33mWARNING\033[m]'
+    log = '[\033[1;34m  LOG  \033[m]'
 
