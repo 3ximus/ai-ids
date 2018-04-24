@@ -22,6 +22,7 @@ class NodeModel:
         self.outputs       = dict(zip(attack_keys, outputs))
         self.force_train   = config.has_option(node_name, 'force_train')
         self.use_regressor = config.has_option(node_name, 'regressor')
+        self.unsupervised = config.has_option(node_name, 'unsupervised')
         self.save_path     = config.get(node_name, 'saved-model-path')
 
         self.label_map     = dict(config.items(config.get(node_name, 'labels-map'))) if config.has_option(node_name, 'labels-map') else dict()
@@ -162,9 +163,12 @@ class NodeModel:
             self.model = eval(self.classifier)
 
             # train and save the model
-            self.log("Training %s" % self.node_name, force_log=True)
+            self.log(MessageType.log,"Training %s" % self.node_name, force_log=True)
             try:
-                self.model.fit(X_train, y_train)
+                if(self.unsupervised):
+                    self.model.fit(X_train)
+                else:
+                    self.model.fit(X_train, y_train)
             except ValueError as err:
                 self.log(MessageType.error, "Problem found when training model, this classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % model)
                 exit()
@@ -191,6 +195,12 @@ class NodeModel:
         self.log(MessageType.log, "Predicting on #%d samples" % len(X_test))
         try:
             y_predicted = self.model.predict(X_test)
+            if self.unsupervised:
+                benign = y_predicted.count(1)
+                all_flows = len(y_predicted)
+                print("Benign count:",benign)
+                print("Malign count:",benign)
+            print(y_predicted)
         except ValueError as e:
             self.log(MessageType.error, 'Predicting\n'+ str(e))
             exit()
@@ -199,6 +209,7 @@ class NodeModel:
             self.outputs = {k:np.argmax(self.outputs[k]) for k in self.outputs}
         else:
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
+        print(y_predicted)
         self.stats.update(y_predicted, y_test, self.outputs, self.use_regressor)
         return y_predicted
 
