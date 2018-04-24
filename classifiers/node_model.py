@@ -25,6 +25,9 @@ class NodeModel:
         self.unsupervised = config.has_option(node_name, 'unsupervised')
         self.save_path     = config.get(node_name, 'saved-model-path')
 
+        if self.use_regressor or self.unsupervised: # generate outputs for unsupervised or regressor models
+            self.outputs = {k:np.argmax(self.outputs[k]) for k in self.outputs}
+
         self.label_map     = dict(config.items(config.get(node_name, 'labels-map'))) if config.has_option(node_name, 'labels-map') else dict()
 
         # model settings
@@ -179,7 +182,7 @@ class NodeModel:
         '''Apply a created model to given test_data (tuple with data input and data labels) and return predicted classification'''
 
         if not self.model:
-            self.log(MessageType.error, "ERROR: A model hasn't been trained or loaded yet for %s. Run NodeModel.train" % seld.node_name)
+            self.log(MessageType.error, "ERROR: A model hasn't been trained or loaded yet for %s. Run NodeModel.train" % self.node_name)
             exit()
 
         X_test, y_test, _ = test_data
@@ -195,22 +198,14 @@ class NodeModel:
         self.log(MessageType.log, "Predicting on #%d samples" % len(X_test))
         try:
             y_predicted = self.model.predict(X_test)
-            if self.unsupervised:
-                benign = y_predicted.count(1)
-                all_flows = len(y_predicted)
-                print("Benign count:",benign)
-                print("Malign count:",benign)
-            print(y_predicted)
         except ValueError as e:
             self.log(MessageType.error, 'Predicting\n'+ str(e))
             exit()
 
-        if self.use_regressor:
-            self.outputs = {k:np.argmax(self.outputs[k]) for k in self.outputs}
-        else:
+        if not self.use_regressor and not self.unsupervised:
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
-        print(y_predicted)
-        self.stats.update(y_predicted, y_test, self.outputs, self.use_regressor)
+
+        self.stats.update(y_predicted, y_test, self.outputs)
         return y_predicted
 
 
@@ -239,7 +234,7 @@ class Stats:
     def get_total_correct(self):
         return self.total_correct
 
-    def update(self, y_predicted, y_test, outputs, use_regressor=False):
+    def update(self, y_predicted, y_test, outputs):
         '''Update stats values with more results. Thread safe.
 
             Parameters
@@ -250,9 +245,6 @@ class Stats:
         '''
         predict_uniques, predict_counts = np.unique(y_predicted, axis=0, return_counts=True)
         test_uniques, test_counts = np.unique(y_test, axis=0, return_counts=True)
-
-        if use_regressor:
-            y_test = np.argmax(y_test, axis=1)
 
         with self.lock:
             for label in outputs:
