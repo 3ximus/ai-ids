@@ -171,7 +171,7 @@ class NodeModel:
                 else:
                     self.model.fit(X_train, y_train)
             except ValueError as err:
-                self.log(MessageType.error, "Problem found when training model, this classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % model)
+                self.log(MessageType.error, "Problem found when training model, this classifier might be a regressor:\n%s\nIf it is use 'regressor' option in configuration file" % self.model)
                 exit()
             self.save_model(self.saved_model_file, self.model)
         return self.model
