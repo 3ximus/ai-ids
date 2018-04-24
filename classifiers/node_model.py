@@ -149,8 +149,6 @@ class NodeModel:
             # CREATE NEW MODEL
 
             X_train, y_train, _ = self.parse_csvdataset(train_filename)
-            if self.use_regressor:
-                y_train = np.argmax(y_train, axis=1)
 
             # scaler setup
             if self.scaler_module:
@@ -205,6 +203,9 @@ class NodeModel:
         if not self.use_regressor and not self.unsupervised:
             y_predicted = (y_predicted == y_predicted.max(axis=1, keepdims=True)).astype(int)
 
+        if self.unsupervised:
+            y_predicted[y_predicted == 1] = 0
+            y_predicted[y_predicted == -1] = 1
         self.stats.update(y_predicted, y_test, self.outputs)
         return y_predicted
 
@@ -243,6 +244,7 @@ class Stats:
             - y_test          numpy list of target outputs
             - outputs         dictionary where keys are labels and values are encoded outputs of each label
         '''
+
         predict_uniques, predict_counts = np.unique(y_predicted, axis=0, return_counts=True)
         test_uniques, test_counts = np.unique(y_test, axis=0, return_counts=True)
 
