@@ -80,10 +80,7 @@ class NodeModel:
         '''
         used_model_md5 = hashlib.md5()
         used_model_md5.update(classifier_settings.encode('utf-8'))
-        train_file_md5 = hashlib.md5()
-        with open(train_filename, 'rb') as tf:
-            train_file_md5.update(tf.read())
-        return base_path + '/%s-%s-%s' % (train_filename[:-4].replace('/','-'), train_file_md5.hexdigest()[:7], used_model_md5.hexdigest()[:7])
+        return base_path + '/%s-%s' % (train_filename[:-4].replace('/','-'), used_model_md5.hexdigest()[:7])
 
 
     def parse_csvdataset(self, filename):
