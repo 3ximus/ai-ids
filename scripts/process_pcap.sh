@@ -11,7 +11,7 @@ csv_filename=${pcap_filename%.*}.csv
 
 # dataset conversion (pcap --> csv)
 JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64/"
-cd dist/bin
+cd ../dist/bin
 ./CICFlowMeter "$1" "../../csv/extracted/test/"
 cd ../..
 [[ -d "csv/test/malign" ]] || mkdir "csv/test/malign"

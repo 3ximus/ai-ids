@@ -2,7 +2,7 @@
 from __future__ import print_function
 import os, argparse, re, curses
 import numpy as np
-from node_model import NodeModel
+from classifiers.node_model import NodeModel
 import threading
 import time
 try: import configparser
@@ -17,7 +17,7 @@ op.add_argument('files', metavar='file', nargs='+', help='csv file with all feat
 op.add_argument('-s', '--select', nargs='+', help='select on layer/node to test from config file')
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
 op.add_argument('-v', '--verbose', action='store_true', help="verbose output. Disables curses interface", dest='verbose')
-op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default=os.path.dirname(__file__) + '/options.cfg')
+op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='classifiers/options.cfg')
 args = op.parse_args()
 
 # =====================

@@ -1,6 +1,9 @@
 **/*__pycache__
 **/*.pyc
 
+# build
+build/*
+
 # link
 csv
 pcap
@@ -11,6 +14,8 @@ pcap/*
 dist/*
 saved_neural_networks/*
 results/*
+
+
 # virtual environment
 IDS/*
 .vscode/*
