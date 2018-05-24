@@ -14,7 +14,10 @@ pcap/*
 dist/*
 saved_neural_networks/*
 results/*
-
+tk_flowmeter.py
+create_trains_tests.sh
+create_layer1_layer2.sh
+new/*
 
 # virtual environment
 IDS/*
