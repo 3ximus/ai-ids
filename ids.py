@@ -37,14 +37,15 @@ L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 CHUNK_SIZE = conf.getint('ids', 'chunk-size')
 MAX_THREADS = conf.getint('ids', 'max-threads')
 
+if L2_NODE_NAMES: # there is a layer2
 # verifiy configuration integrity
-l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
-if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
-    print("Number of l1 output labels and l2 nodes don't match in config file %s" % args.config_file)
-    exit()
-if not all([(item[0] == item[1][item[1].find('-')+1:] == item[2][item[2].find('-')+1:]) for item in zip(conf.options('labels-l1'), L2_NODE_NAMES, l2_sections)]):
-    print("Names of l1 output labels do not match l2 node names in config file %s" % args.config_file)
-    exit()
+    l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
+    if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
+        print("Number of l1 output labels and l2 nodes don't match in config file %s" % args.config_file)
+        exit()
+    if not all([(item[0] == item[1][item[1].find('-')+1:] == item[2][item[2].find('-')+1:]) for item in zip(conf.options('labels-l1'), L2_NODE_NAMES, l2_sections)]):
+        print("Names of l1 output labels do not match l2 node names in config file %s" % args.config_file)
+        exit()
 
 # =====================
 #   CREATE AND TRAIN
@@ -55,8 +56,9 @@ l1 = NodeModel('l1', conf, verbose=args.verbose)
 l1.train(L1_TRAIN_FILE, args.disable_load)
 
 # LAYER 2
-l2_nodes = [NodeModel(node_name, conf, verbose=args.verbose) for node_name in L2_NODE_NAMES]
-[l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load) for node in range(len(l2_nodes))]
+if L2_NODE_NAMES:
+    l2_nodes = [NodeModel(node_name, conf, verbose=args.verbose) for node_name in L2_NODE_NAMES]
+    [l2_nodes[node].train(L2_TRAIN_FILES[node], args.disable_load) for node in range(len(l2_nodes))]
 
 # =====================
 #   THREAD TEST CHUNK
@@ -76,24 +78,25 @@ def print_curses_stats(): # meant to be used inside each thread to update its re
         stdscr.refresh()
         stdscr.clear()
 
-def predict_chunk(test_data):
+def predict_chunk(test_data, use_l2=True):
     thread_semaphore.acquire()
     # LAYER 1
     y_predicted = l1.predict(test_data)
 
-    # OUTPUT DATA PARTITION TO FEED LAYER 2
-    labels_index = np.argmax(y_predicted, axis=1)
-    # ignore test_data[1] since its only used for l1 crossvalidation
-    filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
-                               np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
-    l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-    if not args.verbose: print_curses_stats()
-
-    # LAYER 2
-    for node in range(len(l2_nodes)):
-        if len(l2_inputs[node][0]) != 0:
-            y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
+    if use_l2:
+        # OUTPUT DATA PARTITION TO FEED LAYER 2
+        labels_index = np.argmax(y_predicted, axis=1)
+        # ignore test_data[1] since its only used for l1 crossvalidation
+        filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
+                                   np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
+        l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
         if not args.verbose: print_curses_stats()
+
+        # LAYER 2
+        for node in range(len(l2_nodes)):
+            if len(l2_inputs[node][0]) != 0:
+                y_predicted = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1]))
+            if not args.verbose: print_curses_stats()
     thread_semaphore.release()
 
 # =====================
@@ -117,7 +120,7 @@ thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
 try:
     if args.verbose: print("Reading Test Dataset in chunks...")
     for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE): # launch threads
-        thread = threading.Thread(target=predict_chunk,args=(test_data,))
+        thread = threading.Thread(target=predict_chunk,args=(test_data, bool(L2_NODE_NAMES),))
         thread.start()
 
     for t in threading.enumerate(): # wait for the remaining threads
@@ -136,22 +139,23 @@ finally:
 print(os.path.basename(args.files[0]))
 print("\033[1;36m    LAYER 1\033[m")
 print(l1.stats)
-print("\033[1;36m    LAYER 2\033[m")
 # output counter for l2
-output_counter = [0] * len(conf.options('labels-l2'))
-total = total_correct = total_fp = 0
-for node in range(len(l2_nodes)):
-    if l2_nodes[node].stats.n > 0:
-        # for i, label in enumerate(conf.options('labels-l2')):
-        #     output_counter[i] += l2_nodes[node].stats.get_predicted(label)
-        total += l2_nodes[node].stats.n
-        total_correct += l2_nodes[node].stats.total_correct
-        total_fp += l2_nodes[node].stats.fp[np.argmax(l2_nodes[node].outputs['MALIGN'])]
-        print(L2_NODE_NAMES[node])
-        print(l2_nodes[node].stats)
+if L2_NODE_NAMES:
+    print("\033[1;36m    LAYER 2\033[m")
+    output_counter = [0] * len(conf.options('labels-l2'))
+    total = total_correct = total_fp = 0
+    for node in range(len(l2_nodes)):
+        if l2_nodes[node].stats.n > 0:
+            # for i, label in enumerate(conf.options('labels-l2')):
+            #     output_counter[i] += l2_nodes[node].stats.get_predicted(label)
+            total += l2_nodes[node].stats.n
+            total_correct += l2_nodes[node].stats.total_correct
+            total_fp += l2_nodes[node].stats.fp[np.argmax(l2_nodes[node].outputs['MALIGN'])]
+            print(L2_NODE_NAMES[node])
+            print(l2_nodes[node].stats)
 
-print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
-# print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
-# print("Ratio:  \033[1;32m%9f\033[m | \033[1;31m%f\033[m" % (output_counter[0]*100./sum(output_counter), output_counter[1]*100./sum(output_counter)))
+    print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
+    # print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
+    # print("Ratio:  \033[1;32m%9f\033[m | \033[1;31m%f\033[m" % (output_counter[0]*100./sum(output_counter), output_counter[1]*100./sum(output_counter)))
 
-print("    TP: %9f%%   FP: %9f%%" % (total_correct*100./total , total_fp*100./total))
+    print("    TP: %9f%%   FP: %9f%%" % (total_correct*100./total , total_fp*100./total))
