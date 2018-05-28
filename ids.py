@@ -67,10 +67,10 @@ def print_curses_stats(): # meant to be used inside each thread to update its re
         stdscr.addstr(os.path.basename(args.files[0]) + "\n")
         stdscr.addstr("    LAYER 1\n", curses.color_pair(7) | curses.A_BOLD)
         l1.stats.update_curses_screen(stdscr, curses)
-        if any([node.stats.total for node in l2_nodes]):
+        if any([node.stats.n for node in l2_nodes]):
             stdscr.addstr("    LAYER 2\n", curses.color_pair(7) | curses.A_BOLD)
         for node in range(len(l2_nodes)):
-            if l2_nodes[node].stats.total > 0:
+            if l2_nodes[node].stats.n > 0:
                 stdscr.addstr(L2_NODE_NAMES[node]+'\n')
                 l2_nodes[node].stats.update_curses_screen(stdscr, curses)
         stdscr.refresh()
@@ -139,13 +139,19 @@ print(l1.stats)
 print("\033[1;36m    LAYER 2\033[m")
 # output counter for l2
 output_counter = [0] * len(conf.options('labels-l2'))
+total = total_correct = total_fp = 0
 for node in range(len(l2_nodes)):
-    if l2_nodes[node].stats.total > 0:
-        output_counter[0] += l2_nodes[node].stats.get_label_predicted("BENIGN")
-        output_counter[1] += l2_nodes[node].stats.get_label_predicted("MALIGN")
+    if l2_nodes[node].stats.n > 0:
+        # for i, label in enumerate(conf.options('labels-l2')):
+        #     output_counter[i] += l2_nodes[node].stats.get_predicted(label)
+        total += l2_nodes[node].stats.n
+        total_correct += l2_nodes[node].stats.total_correct
+        total_fp += l2_nodes[node].stats.fp[np.argmax(l2_nodes[node].outputs['MALIGN'])]
         print(L2_NODE_NAMES[node])
         print(l2_nodes[node].stats)
 
 print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
-print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
-print("Ratio:  \033[1;32m%9f\033[m | \033[1;31m%f\033[m" % (output_counter[0]*100./sum(output_counter), output_counter[1]*100./sum(output_counter)))
+# print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
+# print("Ratio:  \033[1;32m%9f\033[m | \033[1;31m%f\033[m" % (output_counter[0]*100./sum(output_counter), output_counter[1]*100./sum(output_counter)))
+
+print("    TP: %9f%%   FP: %9f%%" % (total_correct*100./total , total_fp*100./total))

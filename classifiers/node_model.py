@@ -1,6 +1,6 @@
 from __future__ import print_function
 import os, pickle, hashlib, threading
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 import numpy as np
 
 
@@ -15,11 +15,11 @@ class NodeModel:
         self.message_buffer = [] # buffer for error messages
 
         # get options
-        attack_keys        = config.options(config.get(node_name, 'labels'))
-        n_labels           = len(attack_keys)
+        self.attack_keys   = config.options(config.get(node_name, 'labels'))
+        n_labels           = len(self.attack_keys)
         outputs            = [[1 if j == i else 0 for j in range(n_labels)] for i in range(n_labels)]
 
-        self.outputs       = dict(zip(attack_keys, outputs))
+        self.outputs       = dict(zip(self.attack_keys, outputs))
         self.force_train   = config.has_option(node_name, 'force_train')
         self.use_regressor = config.has_option(node_name, 'regressor')
         self.unsupervised = config.has_option(node_name, 'unsupervised')
@@ -206,7 +206,7 @@ class NodeModel:
         if self.unsupervised:
             y_predicted[y_predicted == 1] = 0
             y_predicted[y_predicted == -1] = 1
-        self.stats.update(y_predicted, y_test, self.outputs)
+        self.stats.update(y_predicted, y_test)
         return y_predicted
 
 
@@ -215,78 +215,75 @@ class Stats:
 
     def __init__(self, node):
         self.node = node
-        self.stats = dict()
-        self.total = 0
-        self.total_correct = 0
+        self.n = self.tp = self.fp = self.fn = self.total_correct = 0
+        self.confusion_matrix = np.matrix([[0 for x in range(len(node.outputs))] for x in range(len(node.outputs))])
         self.lock = threading.Lock()
 
-    def __len__(self):
-        return len(self.stats)
-
-    def get_label_predicted(self, label):
-        return self.stats[label][0]
-
-    def get_label_total(self, label):
-        return self.stats[label][1]
-
-    def get_total(self):
-        return self.total
-
-    def get_total_correct(self):
-        return self.total_correct
-
-    def update(self, y_predicted, y_test, outputs):
+    def update(self, y_predicted, y_test):
         '''Update stats values with more results. Thread safe.
 
             Parameters
             ----------
             - y_predicted     numpy list of predict NN outputs
             - y_test          numpy list of target outputs
-            - outputs         dictionary where keys are labels and values are encoded outputs of each label
         '''
 
-        predict_uniques, predict_counts = np.unique(y_predicted, axis=0, return_counts=True)
-        test_uniques, test_counts = np.unique(y_test, axis=0, return_counts=True)
-
         with self.lock:
-            for label in outputs:
-                tmp = [np.array_equal(outputs[label], x) for x in predict_uniques]
-                label_predicted = predict_counts[tmp.index(True)] if any(tmp) else 0
-
-                tmp = [np.array_equal(outputs[label], x) for x in test_uniques]
-                label_total = test_counts[tmp.index(True)] if any(tmp) else 0
-
-                if label not in self.stats:
-                    self.stats[label] = [label_predicted, label_total]
-                else:
-                    self.stats[label][0] += label_predicted
-                    self.stats[label][1] += label_total
-
-            self.total += len(y_predicted)
             self.total_correct += accuracy_score(y_test, y_predicted, normalize=False)
+            self.confusion_matrix += np.matrix(confusion_matrix(
+                np.argmax(y_test, axis=1), np.argmax(y_predicted, axis=1), labels=list(range(len(self.node.attack_keys)))))
+            # TODO FIXME Using np.argmax puts unclassified entries ([0,0,...,0]) as label zero, see previous code to count those
+
+            # calculate some metrics right away
+            self.n = self.confusion_matrix.sum()
+            self.tp = sum(np.diag(self.confusion_matrix))
+            self.fp = [self.confusion_matrix[:,i].sum() - self.confusion_matrix[i,i] for i in range(len(self.confusion_matrix))]
+            self.fn = [self.confusion_matrix[i,:].sum() - self.confusion_matrix[i,i] for i in range(len(self.confusion_matrix))]
 
     def __repr__(self):
-        rep_str = "            Type  Predicted / TOTAL\n"
         with self.lock:
-            for label in self.stats:
-                predict = self.stats[label][0]
-                total = self.stats[label][1]
-                color = '' if predict == total == 0 else '\033[1;3%dm' % (1 if predict > total else 2)
-                rep_str += "%s%16s     % 6d / %d\033[m\n" % (color, label, predict, total)
-            rep_str += '    \033[1;34m->\033[m %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total)
+            # confusion matrix
+            lmsize = max(map(len, self.node.attack_keys[:-1])) # for output formatting
+            rep_str = " Pred\Real |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n"
+            for i, label in enumerate(self.node.attack_keys):
+                rep_str += "%10s |" % label
+                for j in range(len(self.node.attack_keys)):
+                    rep_str += (("\033[1;32m" if i == j else '') + "%" + str(lmsize) + "d\033[m ") % self.confusion_matrix[i,j]
+                rep_str += "\n"
+
+            # stats
+            if len(self.node.attack_keys) == 2: # MALIGN OR BENIGN
+                positive = np.argmax(self.node.outputs['MALIGN']) # get index of MALIGN which will be considered positive
+                rep_str += "\033[1;34mTPR = %4f%%  FPR = %4f%%\033[m\n" % (self.tp*100./self.n, self.fp[positive]*100./self.n)
+            else:
+                rep_str += "\033[1;34mTPR = %4f%%\033[m\n" % (self.tp*100./self.n)
+
+            # unidentified
+            if self.tp - self.total_correct:
+                rep_str += "Unidentified flows marked as \"%s\": \033[1;33m#%d\033[m\n" % \
+                    (self.node.attack_keys[0], self.tp - self.total_correct)
+
+            # append error messages
             for err_msg in self.node.message_buffer:
                 rep_str += '[\033[1;31mERROR\033[m]%s\n'%err_msg
         return rep_str
 
     def update_curses_screen(self, curses_screen, curses):
         with self.lock:
-            curses_screen.addstr("            Type  Predicted / TOTAL\n")
-            for label in self.stats:
-                predict = self.stats[label][0]
-                total = self.stats[label][1]
-                color = curses.color_pair(2) if predict == total == 0 else curses.color_pair(2 if predict > total else 3)
-                curses_screen.addstr("%16s     % 6d / %d\n" % (label, predict, total), color | curses.A_BOLD)
-            curses_screen.addstr('    -> %f%% [%d/%d]\n' % (float(self.total_correct)/self.total*100, self.total_correct , self.total))
+            lmsize = max(map(len, self.node.attack_keys[:-1])) # for output formatting
+            curses_screen.addstr(" Pred\Real |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n")
+            for i, label in enumerate(self.node.attack_keys):
+                curses_screen.addstr("%10s |" % label)
+                for j in range(len(self.node.attack_keys)):
+                    curses_screen.addstr(("%" + str(lmsize) + "d ") % self.confusion_matrix[i,j])
+                curses_screen.addstr('\n')
+
+            if len(self.node.attack_keys) == 2: # MALIGN OR BENIGN
+                positive = np.argmax(self.node.outputs['MALIGN']) # get index of MALIGN which will be considered positive
+                curses_screen.addstr("TPR = %4f%%  FPR = %4f%%\n" % (self.tp*100./self.n, self.fp[positive]*100./self.n), curses.color_pair(5) | curses.A_BOLD)
+            else:
+                curses_screen.addstr("TPR = %4f%%\n" % (self.tp*100./self.n), curses.color_pair(5) | curses.A_BOLD)
+
             for err_msg in self.node.message_buffer:
                 curses_screen.addstr('[')
                 curses_screen.addstr('ERROR', curses.color_pair(2) | curses.A_BOLD)
