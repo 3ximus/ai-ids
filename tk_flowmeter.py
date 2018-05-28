@@ -154,45 +154,45 @@ def process_pcap(file,verbose):
         print('Total number of packets:',n_pkts)
     return packet_properties
 
-def build_monologues(packet_properties,verbose):
-        #associate monologue_ids to packets
-        monologues = dict()
-        monologue_ids = []
+def build_uniflows(packet_properties,verbose):
+        #associate uniflow_ids to packets
+        uniflows = dict()
+        uniflow_ids = []
         if verbose: bar = Bar('Creating unidirectional flows', max=len(packet_properties))
         for propertie in packet_properties:
-            monologue_ids.append(propertie[0])
-            if propertie[0] in monologues:
-                monologues[propertie[0]].append(propertie)
+            uniflow_ids.append(propertie[0])
+            if propertie[0] in uniflows:
+                uniflows[propertie[0]].append(propertie)
             else:
-                monologues[propertie[0]]=[propertie]
+                uniflows[propertie[0]]=[propertie]
             if verbose: bar.next()
-        monologue_ids=list(OrderedDict.fromkeys(monologue_ids))             #remove duplicates mantaining order
+        uniflow_ids=list(OrderedDict.fromkeys(uniflow_ids))             #remove duplicates mantaining order
         if verbose:
             bar.finish()
-            print('Number of unidirectional flows (w/o flag separation):',len(monologue_ids))
-        return monologues,monologue_ids
+            print('Number of unidirectional flows (w/o flag separation):',len(uniflow_ids))
+        return uniflows,uniflow_ids
 
-def parse_duplicates(monologue_ids,verbose):
+def parse_duplicates(uniflow_ids,verbose):
     #join unidirectional flows with their counterpart (flows/conversations)
     duplicates_parsed = []
-    if verbose: bar = Bar('Assessing duplicate flows', max=len(monologue_ids))
-    for mon_id in monologue_ids:
+    if verbose: bar = Bar('Assessing duplicate flows', max=len(uniflow_ids))
+    for uniflow_id in uniflow_ids:
         try:
             custom_items = [ duplicates_parsed[i] for i in range(5) ]
         except IndexError:
             custom_items = []
-        if mon_id[0:-1] not in custom_items:
-            duplicates_parsed.append(mon_id)
-            duplicates_parsed.append((mon_id[2],mon_id[3],mon_id[0],mon_id[1],mon_id[4],mon_id[5]))
+        if uniflow_id[0:-1] not in custom_items:
+            duplicates_parsed.append(uniflow_id)
+            duplicates_parsed.append((uniflow_id[2],uniflow_id[3],uniflow_id[0],uniflow_id[1],uniflow_id[4],uniflow_id[5]))
         if verbose: bar.next()
     if verbose: bar.finish()
     return list(OrderedDict.fromkeys(duplicates_parsed))
 
-def build_nsp_flows(monologues, duplicates_parsed, verbose):
+def build_nsp_flows(uniflows, duplicates_parsed, verbose):
     #join unidirectional flow information into its bidirectional flow equivalent
     nsp_flows=dict()
     #non-separated flow ids (flows that haven't yet taken into account the begin/end flow flags)
-    nsp_flow_ids=[]         
+    nsp_flow_ids=[]
     j=0
     if verbose: bar = Bar('Creating intermediate bidirectional flows', max=len(duplicates_parsed)/2)
     while(j<len(duplicates_parsed)):
@@ -202,9 +202,9 @@ def build_nsp_flows(monologues, duplicates_parsed, verbose):
         # which is assumed to be the first request, i.e., a 'forward' packet
         nsp_flow_ids.append(nsp_flow_id)
         try:
-            nsp_flows[nsp_flow_id] = monologues[nsp_flow_id] + monologues[duplicate_id]
+            nsp_flows[nsp_flow_id] = uniflows[nsp_flow_id] + uniflows[duplicate_id]
         except KeyError:
-            nsp_flows[nsp_flow_id] = monologues[nsp_flow_id]
+            nsp_flows[nsp_flow_id] = uniflows[nsp_flow_id]
         j+=2
         if verbose: bar.next()
     if verbose:
@@ -467,12 +467,12 @@ def print_flows(file):
     start_time = time.time()
     
     packet_properties = process_pcap(file, args.verbose)
-    monologues,monologue_ids = build_monologues(packet_properties, args.verbose)
+    uniflows,uniflow_ids = build_uniflows(packet_properties, args.verbose)
     del(packet_properties)
-    duplicates_parsed = parse_duplicates(monologue_ids,args.verbose)
-    del(monologue_ids)
-    nsp_flows,nsp_flow_ids = build_nsp_flows(monologues, duplicates_parsed, args.verbose)
-    del(monologues)
+    duplicates_parsed = parse_duplicates(uniflow_ids,args.verbose)
+    del(uniflow_ids)
+    nsp_flows,nsp_flow_ids = build_nsp_flows(uniflows, duplicates_parsed, args.verbose)
+    del(uniflows)
     del(duplicates_parsed)
     flows,flow_ids = build_tcpflows(nsp_flows,nsp_flow_ids, args.verbose) # At this point, flow_ids are ordered by the flow start time and the packets in each flow are internally ordered by their timestamp
     del(nsp_flow_ids)

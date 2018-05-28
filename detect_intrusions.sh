@@ -15,7 +15,15 @@ if [ -e "$csv_file" ]
 then
 	echo "Testing capture file ${counter} for intrusions..."
 	python ids.py "$csv_file" --show-comms-only --alert-file "$alert_file"
-	echo "Alert saved in: $alert_file"
+	if [ -s "$alert_file" ] 									# check if alert file has content
+	then
+		echo "Alert saved in: $alert_file"
+	else
+		echo "There were no recorded alerts for this capture, so all files will be deleted."
+		rm "$pcap_file"
+		rm "$csv_file"
+		rm "$alert_file"
+	fi
 	counter=$(($counter+1))
 else
 	echo "CSV wasn't generated, which means that there were no tcp flows captured in this pcap. Alert file not created."

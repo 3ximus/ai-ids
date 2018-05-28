@@ -6,7 +6,7 @@ interface="$1"
 pcap_dir="new/running/pcap/"
 csv_dir="new/running/csv/"
 alert_dir="new/running/alerts/"
-cap_duration=10
+cap_duration=600
 
 [[ -d $pcap_dir ]] || mkdir -p $pcap_dir
 [[ -d $csv_dir ]] || mkdir -p $csv_dir

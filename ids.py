@@ -56,7 +56,7 @@ L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 CHUNK_SIZE = conf.getint('ids', 'chunk-size')
 MAX_THREADS = conf.getint('ids', 'max-threads')
 
-ALERT_LOWER_BOUND_FLOWS = 500
+ALERT_LOWER_BOUND_FLOWS = 150
 # verifiy configuration integrity
 l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
 if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
