@@ -15,6 +15,7 @@ op.add_argument('-m', '--manual-label', action='store_true', help="always manual
 op.add_argument('--benign', action='store_true', help="write only benign flows, in absence of this flag writes only non benign flows", dest='benign')
 op.add_argument('-s', '--suffix', help="suffix of output files", dest='suffix', default=['.csv'], nargs=1)
 op.add_argument('-f', '--features', help="features file", dest='features')
+op.add_argument('-i', '--ignore-labels', action='store_true', help="do not perform relabelling", dest='ignore_labels')
 args = op.parse_args()
 
 CHUNKSIZE = 10 ** 4
@@ -45,17 +46,17 @@ of_descriptors = [open(of, 'w') for of in of_names]
 print("Processing...")
 for i, in_file in enumerate(args.files[:-1]):
     nlabel = 'BENIGN' if args.benign else None
-    if not args.benign:
+    if not args.benign or args.ignore_labels:
         for k in KNOWN_LABELS: # regex
             if re.search(k, in_file, re.I):
                 nlabel = KNOWN_LABELS[k]
                 break
-    if args.manual_label or not nlabel: # ask user for new label
+    if (args.manual_label or not nlabel) and not args.ignore_labels: # ask user for new label
         nlabel = input('Choose label for %s %s > ' % (in_file, '[PRESS ENTER: %s]' % nlabel if nlabel else '')) or nlabel
     total_chunks = sum(1 for row in open(in_file,'r')) / CHUNKSIZE or 1
     for c, chunk in enumerate(pandas.read_csv(in_file,chunksize=CHUNKSIZE,dtype="unicode")):
         progress_bar((c+1) / total_chunks * 100, initial_text=in_file+' ', bar_body="\033[34m-\033[m", bar_arrow="\033[34m>\033[m", align_right=True)
-        chunk['Label'] = nlabel # assign new label
+        if not args.ignore_labels: chunk['Label'] = nlabel # assign new label
         df = chunk[(chunk["Label"] != "BENIGN")] if not args.benign else chunk[(chunk["Label"] == "BENIGN")]
         df = df[df["Flow Byts/s"].notnull()]
         df = df[df["Flow Pkts/s"].notnull()]

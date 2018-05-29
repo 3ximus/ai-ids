@@ -230,8 +230,9 @@ class Stats:
 
         with self.lock:
             self.total_correct += accuracy_score(y_test, y_predicted, normalize=False)
-            self.confusion_matrix += np.matrix(confusion_matrix(
-                np.argmax(y_test, axis=1), np.argmax(y_predicted, axis=1), labels=list(range(len(self.node.attack_keys)))))
+            x = np.argmax(y_test, axis=1) if len(y_test.shape) == 2 else y_test
+            y = np.argmax(y_predicted, axis=1) if len(y_predicted.shape) == 2 else y_predicted
+            self.confusion_matrix += np.matrix(confusion_matrix(x, y, labels=list(range(len(self.node.attack_keys)))))
             # TODO FIXME Using np.argmax puts unclassified entries ([0,0,...,0]) as label zero, see previous code to count those
 
             # calculate some metrics right away

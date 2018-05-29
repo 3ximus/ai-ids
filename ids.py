@@ -64,17 +64,18 @@ if L2_NODE_NAMES:
 #   THREAD TEST CHUNK
 # =====================
 
-def print_curses_stats(): # meant to be used inside each thread to update its results
+def print_curses_stats(use_l2=True): # meant to be used inside each thread to update its results
     with curses_lock:
         stdscr.addstr(os.path.basename(args.files[0]) + "\n")
         stdscr.addstr("    LAYER 1\n", curses.color_pair(7) | curses.A_BOLD)
         l1.stats.update_curses_screen(stdscr, curses)
-        if any([node.stats.n for node in l2_nodes]):
-            stdscr.addstr("    LAYER 2\n", curses.color_pair(7) | curses.A_BOLD)
-        for node in range(len(l2_nodes)):
-            if l2_nodes[node].stats.n > 0:
-                stdscr.addstr(L2_NODE_NAMES[node]+'\n')
-                l2_nodes[node].stats.update_curses_screen(stdscr, curses)
+        if use_l2:
+            if any([node.stats.n for node in l2_nodes]):
+                stdscr.addstr("    LAYER 2\n", curses.color_pair(7) | curses.A_BOLD)
+            for node in range(len(l2_nodes)):
+                if l2_nodes[node].stats.n > 0:
+                    stdscr.addstr(L2_NODE_NAMES[node]+'\n')
+                    l2_nodes[node].stats.update_curses_screen(stdscr, curses)
         stdscr.refresh()
         stdscr.clear()
 
@@ -83,6 +84,7 @@ def predict_chunk(test_data, use_l2=True):
     # LAYER 1
     y_predicted = l1.predict(test_data)
 
+    if not args.verbose: print_curses_stats(use_l2)
     if use_l2:
         # OUTPUT DATA PARTITION TO FEED LAYER 2
         labels_index = np.argmax(y_predicted, axis=1)
@@ -90,7 +92,6 @@ def predict_chunk(test_data, use_l2=True):
         filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                    np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
         l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-        if not args.verbose: print_curses_stats()
 
         # LAYER 2
         for node in range(len(l2_nodes)):
