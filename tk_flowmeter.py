@@ -141,9 +141,9 @@ def process_pcap(file,verbose):
                 exit()
 
             direction_id=(inet_to_str(ip.src),transport_layer.sport,inet_to_str(ip.dst),transport_layer.dport,transport_protocol_code,0)          # src ip, src port, dst ip, dst port, protocol, inflow_counter
-            packet_info = (direction_id,str(datetime.datetime.utcfromtimestamp(timestamp)),pkt_len,header_len,pkt_size,args.label,do_not_fragment,more_fragments,          \
+            packet_info = (direction_id,str(datetime.datetime.utcfromtimestamp(timestamp)),pkt_len,header_len,pkt_size,do_not_fragment,more_fragments,          \
                 fin_flag,syn_flag,rst_flag,psh_flag,ack_flag,urg_flag,ece_flag,cwr_flag) if transport_protocol_name=='TCP'\
-                else (direction_id,str(datetime.datetime.utcfromtimestamp(timestamp)),pkt_len,header_len,pkt_size,args.label,do_not_fragment,more_fragments)
+                else (direction_id,str(datetime.datetime.utcfromtimestamp(timestamp)),pkt_len,header_len,pkt_size,do_not_fragment,more_fragments)
             packet_properties.append(packet_info)
             eventually_useful = (mac_addr(eth.src),mac_addr(eth.dst),eth.type,fragment_offset)
             if verbose: bar.next()
@@ -253,14 +253,15 @@ def build_tcpflows(nsp_flows,nsp_flow_ids,verbose):
                 
                 ###### TCP FLOW RULES ######
                 # r1,r2: begin flow
-                r1 = (syn1 and not ack1) and (syn2 and ack2) and (not syn3 and ack3)          # 3-way handshake (full-duplex)
-                r2 = (syn1 and not ack1) and (not syn2 and ack2) # 2-way handshake, (half-duplex)
+                r1 = (syn1 and not ack1) and (syn2 and ack2) and ack3           # 3-way handshake (full-duplex), syn+syn-ack+ack / syn+syn-ack+syn-ack
+                r2 = (syn1 and not ack1) and ack2                               # 2-way handshake (half-duplex), syn+syn-ack / syn+ack
                 # r3,r4: end flow
                 r3 = fin1 and (fin2 and ack2) and ack3
                 r4 = rst1 and not rst2
                 
                 # consider flow begin or ignore it (considering it is safer, but not considering it will leave out flows that have started before the capture)
-                if r1 or r2:
+                # the only rule used will be the half-duplex handshake rule because it is inclusive of the full-duplex handshake rule
+                if r2:
                     flow_begin=True
 
                 # we consider flows only the ones that start with a 2 or 3-way handshake (r1,r2)
@@ -268,17 +269,17 @@ def build_tcpflows(nsp_flows,nsp_flow_ids,verbose):
                 if flow_begin:
                     if r3:
                         new_key=(key[0],key[1],key[2],key[3],key[4],key[5]+inflow_counter)
-                        flows[new_key] = flow[last_i:i+2]
+                        flows[new_key] = flow[last_i:i+3]
                         flow_ids.append(new_key)
                         flow_begin=False
-                        last_i=i+2
+                        last_i=i+3
                         inflow_counter+=1
                     elif r4 or i==flow_n_pkts-1:
                         new_key=(key[0],key[1],key[2],key[3],key[4],key[5]+inflow_counter)
-                        flows[new_key] = flow[last_i:i]
+                        flows[new_key] = flow[last_i:i+1]
                         flow_ids.append(new_key)
                         flow_begin=False
-                        last_i=i
+                        last_i=i+1
                         inflow_counter+=1
                 i+=1
         if verbose: bar.next()
@@ -306,6 +307,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
         flow_n_data_pkts = 0
         fwd_n_data_pkts = 0
         bwd_n_data_pkts = 0
+        flow_flags = []
 
         i = 0
         while i<flow_n_pkts:
@@ -328,7 +330,9 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             current_pkt_len = flows[flow_id][i][2]
             current_header_len = flows[flow_id][i][3]
             current_pkt_size = flows[flow_id][i][4]
+            current_flags = flows[flow_id][i][-10:]
 
+            flow_flags.append(current_flags)
             flow_pkt_lens.append(current_pkt_len)
             flow_header_lens.append(current_header_len)
             flow_pkt_sizes.append(current_pkt_size)
@@ -346,7 +350,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
                 bwd_pkt_sizes.append(current_pkt_size)
                 if current_header_len != current_pkt_len:
                     flow_n_data_pkts+=1
-                    bwd_n_data_pkts
+                    bwd_n_data_pkts+=1
             i+=1
 
         # number of packets (all times in seconds)
@@ -361,6 +365,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             last_pkt_time = unix_time_millis(datetime.datetime.strptime(flows[flow_id][flow_n_pkts-1][1], datetime_format2))
         flow_duration = scale_factor*(last_pkt_time - first_pkt_time)
         if flow_duration==0: flow_duration = (10**-6)       # convention
+
         fwd_n_pkts = len(fwd_pkt_lens)
         bwd_n_pkts = len(bwd_pkt_lens)
         flow_pkts_per_sec = flow_n_pkts/flow_duration
@@ -368,15 +373,18 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
         bwd_pkts_per_sec = bwd_n_pkts/flow_duration
 
         # packet lengths
-        flow_bytes_per_sec = float(np.sum(flow_pkt_lens)/flow_duration)
+        flow_pkt_len_total = float(np.sum(flow_pkt_lens))           # to add and test
+        flow_bytes_per_sec = float(flow_pkt_len_total/flow_duration)
         flow_pkt_len_mean = float(np.mean(flow_pkt_lens))
         flow_pkt_len_std = float(np.std(flow_pkt_lens))
         flow_pkt_len_var = float(np.var(flow_pkt_lens))
         flow_pkt_len_max = float(np.max(flow_pkt_lens))
         flow_pkt_len_min = float(np.min(flow_pkt_lens))
+
         fwd_pkt_len_total = float(np.sum(fwd_pkt_lens))
         fwd_pkt_len_mean = float(np.mean(fwd_pkt_lens))
         fwd_pkt_len_std = float(np.std(fwd_pkt_lens))
+        fwd_pkt_len_var = float(np.var(fwd_pkt_lens))               # to add and test
         fwd_pkt_len_max = float(np.max(fwd_pkt_lens))
         fwd_pkt_len_min = float(np.min(fwd_pkt_lens))
 
@@ -384,10 +392,11 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             bwd_pkt_len_total = float(np.sum(bwd_pkt_lens))
             bwd_pkt_len_mean = float(np.mean(bwd_pkt_lens))
             bwd_pkt_len_std = float(np.std(bwd_pkt_lens))
+            bwd_pkt_len_var = float(np.var(bwd_pkt_lens))           # to add and test
             bwd_pkt_len_max = float(np.max(bwd_pkt_lens))
             bwd_pkt_len_min = float(np.min(bwd_pkt_lens))
         else:
-            bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_max,bwd_pkt_len_min = [0]*5
+            bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_var,bwd_pkt_len_max,bwd_pkt_len_min = [0]*6
 
         # header lengths
         fwd_header_len_total = float(np.sum(fwd_header_lens))                                    # 14 byte Ether header + ip header + tcp/udp header
@@ -395,24 +404,33 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
 
         # packet size
         flow_pkt_size_mean = float(np.mean(flow_pkt_sizes))
-        fwd_pkt_size_mean = float(np.mean(fwd_pkt_sizes))
-        fwd_pkt_size_min = float(np.min(fwd_pkt_sizes))
+        flow_pkt_size_std = float(np.std(flow_pkt_sizes))       # to add and test
+        flow_pkt_size_max = float(np.max(flow_pkt_sizes))       # to add and test
+        flow_pkt_size_min = float(np.min(flow_pkt_sizes))       # to add and test
 
+        fwd_pkt_size_mean = float(np.mean(fwd_pkt_sizes))
+        fwd_pkt_size_std = float(np.std(fwd_pkt_sizes))         # to add and test
+        fwd_pkt_size_max = float(np.max(fwd_pkt_sizes))         # to add and test
+        fwd_pkt_size_min = float(np.min(fwd_pkt_sizes))
 
         if len(bwd_pkt_sizes)!=0:
             bwd_pkt_size_mean = float(np.mean(bwd_pkt_sizes))
+            bwd_pkt_size_std = float(np.std(bwd_pkt_sizes))     # to add and test
+            bwd_pkt_size_max = float(np.max(bwd_pkt_sizes))     # to add and test
+            bwd_pkt_size_min = float(np.min(bwd_pkt_sizes))     # to add and test
         else:
-            bwd_pkt_size_mean = 0
+            bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min = [0]*4
 
 
         # packet inter-arrival times
         if len(flow_iats)!=0:
+            flow_iat_total = float(np.sum(flow_iats))           # to add and test
             flow_iat_mean = float(np.mean(flow_iats))
             flow_iat_std = float(np.std(flow_iats))
             flow_iat_max = float(np.max(flow_iats))
             flow_iat_min = float(np.min(flow_iats))
         else:
-            flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min = [0]*4
+            flow_iat_total,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min = [0]*5
 
         if len(fwd_iats)!=0:
             fwd_iat_total = float(np.sum(fwd_iats))
@@ -431,6 +449,32 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             bwd_iat_min = float(np.min(bwd_iats))
         else:
             bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min=[0]*5
+
+        # flag counts (ip/tcp)
+        flow_df_count,flow_mf_count,flow_fin_count,flow_syn_count,flow_rst_count,flow_psh_count,flow_ack_count,flow_urg_count,flow_ece_count,flow_cwr_count= [0]*10           # to add and test
+        
+        # hmm.....
+        for flag in flow_flags:
+            if flag[0]==True:
+                flow_df_count+=1
+            if flag[1]==True:
+                flow_mf_count+=1
+            if flag[2]==True:
+                flow_fin_count+=1
+            if flag[3]==True:
+                flow_syn_count+=1
+            if flag[4]==True:
+                flow_rst_count+=1
+            if flag[5]==True:
+                flow_psh_count+=1
+            if flag[6]==True:
+                flow_ack_count+=1
+            if flag[7]==True:
+                flow_urg_count+=1
+            if flag[8]==True:
+                flow_ece_count+=1
+            if flag[9]==True:
+                flow_cwr_count+=1
 
         flow_properties = \
             [flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,fwd_pkt_size_mean,bwd_pkt_size_mean,fwd_pkt_size_min,flow_duration,fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,\
