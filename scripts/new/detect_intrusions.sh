@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+if [ $# -ne 5 ]
+then
+	echo "Usage: detect_intrusions <pcap directory> <csv directory> <alert directory> <pcap file name 1> <pcap file name 2>"
+	exit
+fi
+
 pcap_dir="$1"
 csv_dir="$2"
 alert_dir="$3"
