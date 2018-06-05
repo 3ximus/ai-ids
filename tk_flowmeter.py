@@ -123,17 +123,19 @@ def process_pcap(file,verbose):
                 n_udp+=1
                 transport_protocol_code=17
 
-            pkt_len = len(buf)
             ip_header_len = (ip.__hdr_len__ + len(ip.opts))
             transport_header_len = transport_layer.__hdr_len__ + len(transport_layer.opts)
             header_len = 14 + ip_header_len + transport_header_len    # header definition includes all except tcp.data (ip header, ip options, tcp header, tcp options)
+            pkt_len = len(buf)
 
+            # ethernet zero-byte padding until 64 bytes are reached
             if pkt_len>=packet_len_minimum:                                       # ethernet frame minimum size (minimum packet length)
                 pkt_size = pkt_len - header_len                                   # packet size (tcp data length)
             else:
                 eth_padding_bytes = pkt_len - header_len
-                header_len = eth_padding_bytes + header_len
-                pkt_size = pkt_len - header_len                         # ethernet zero-byte padding until 64 bytes are reached
+                # header len will ignore eth padding bytes
+                pkt_len = pkt_len - eth_padding_bytes
+                pkt_size = pkt_len - header_len                         # ethernet zero-byte padding until 64 bytes are reached                    
 
             if pkt_size!=len(transport_layer.data) and args.check_transport_data_length:
                 print("Error on packet no." + str(n_pkts) + ".Packet size should always correspond to tcp data length.")
@@ -186,7 +188,7 @@ def parse_duplicates(uniflow_ids,verbose):
             duplicates_parsed.append((uniflow_id[2],uniflow_id[3],uniflow_id[0],uniflow_id[1],uniflow_id[4],uniflow_id[5]))
         if verbose: bar.next()
     if verbose: bar.finish()
-    return list(OrderedDict.fromkeys(duplicates_parsed))
+    return duplicates_parsed
 
 def build_nsp_flows(uniflows, duplicates_parsed, verbose):
     #join unidirectional flow information into its bidirectional flow equivalent
@@ -364,17 +366,21 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
         except ValueError:
             last_pkt_time = unix_time_millis(datetime.datetime.strptime(flows[flow_id][flow_n_pkts-1][1], datetime_format2))
         flow_duration = scale_factor*(last_pkt_time - first_pkt_time)
-        if flow_duration==0: flow_duration = (10**-6)       # convention
 
         fwd_n_pkts = len(fwd_pkt_lens)
         bwd_n_pkts = len(bwd_pkt_lens)
-        flow_pkts_per_sec = flow_n_pkts/flow_duration
-        fwd_pkts_per_sec = fwd_n_pkts/flow_duration
-        bwd_pkts_per_sec = bwd_n_pkts/flow_duration
+
+        if flow_duration==0:
+            flow_pkts_per_sec = fwd_pkts_per_sec = bwd_pkts_per_sec = 0
+        else:
+            flow_pkts_per_sec = flow_n_pkts/flow_duration
+            fwd_pkts_per_sec = fwd_n_pkts/flow_duration
+            bwd_pkts_per_sec = bwd_n_pkts/flow_duration
+            
 
         # packet lengths
-        flow_pkt_len_total = float(np.sum(flow_pkt_lens))           # to add and test
-        flow_bytes_per_sec = float(flow_pkt_len_total/flow_duration)
+        flow_pkt_len_total = float(np.sum(flow_pkt_lens))           # to add and test x
+        flow_bytes_per_sec = 0 if flow_duration==0 else float(flow_pkt_len_total/flow_duration)
         flow_pkt_len_mean = float(np.mean(flow_pkt_lens))
         flow_pkt_len_std = float(np.std(flow_pkt_lens))
         flow_pkt_len_var = float(np.var(flow_pkt_lens))
@@ -384,7 +390,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
         fwd_pkt_len_total = float(np.sum(fwd_pkt_lens))
         fwd_pkt_len_mean = float(np.mean(fwd_pkt_lens))
         fwd_pkt_len_std = float(np.std(fwd_pkt_lens))
-        fwd_pkt_len_var = float(np.var(fwd_pkt_lens))               # to add and test
+        fwd_pkt_len_var = float(np.var(fwd_pkt_lens))               # to add and test x
         fwd_pkt_len_max = float(np.max(fwd_pkt_lens))
         fwd_pkt_len_min = float(np.min(fwd_pkt_lens))
 
@@ -392,7 +398,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             bwd_pkt_len_total = float(np.sum(bwd_pkt_lens))
             bwd_pkt_len_mean = float(np.mean(bwd_pkt_lens))
             bwd_pkt_len_std = float(np.std(bwd_pkt_lens))
-            bwd_pkt_len_var = float(np.var(bwd_pkt_lens))           # to add and test
+            bwd_pkt_len_var = float(np.var(bwd_pkt_lens))           # to add and test x
             bwd_pkt_len_max = float(np.max(bwd_pkt_lens))
             bwd_pkt_len_min = float(np.min(bwd_pkt_lens))
         else:
@@ -404,27 +410,27 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
 
         # packet size
         flow_pkt_size_mean = float(np.mean(flow_pkt_sizes))
-        flow_pkt_size_std = float(np.std(flow_pkt_sizes))       # to add and test
-        flow_pkt_size_max = float(np.max(flow_pkt_sizes))       # to add and test
-        flow_pkt_size_min = float(np.min(flow_pkt_sizes))       # to add and test
+        flow_pkt_size_std = float(np.std(flow_pkt_sizes))       # to add and test x
+        flow_pkt_size_max = float(np.max(flow_pkt_sizes))       # to add and test x
+        flow_pkt_size_min = float(np.min(flow_pkt_sizes))       # to add and test x
 
         fwd_pkt_size_mean = float(np.mean(fwd_pkt_sizes))
-        fwd_pkt_size_std = float(np.std(fwd_pkt_sizes))         # to add and test
-        fwd_pkt_size_max = float(np.max(fwd_pkt_sizes))         # to add and test
+        fwd_pkt_size_std = float(np.std(fwd_pkt_sizes))         # to add and test x
+        fwd_pkt_size_max = float(np.max(fwd_pkt_sizes))         # to add and test x
         fwd_pkt_size_min = float(np.min(fwd_pkt_sizes))
 
         if len(bwd_pkt_sizes)!=0:
             bwd_pkt_size_mean = float(np.mean(bwd_pkt_sizes))
-            bwd_pkt_size_std = float(np.std(bwd_pkt_sizes))     # to add and test
-            bwd_pkt_size_max = float(np.max(bwd_pkt_sizes))     # to add and test
-            bwd_pkt_size_min = float(np.min(bwd_pkt_sizes))     # to add and test
+            bwd_pkt_size_std = float(np.std(bwd_pkt_sizes))     # to add and test x
+            bwd_pkt_size_max = float(np.max(bwd_pkt_sizes))     # to add and test x
+            bwd_pkt_size_min = float(np.min(bwd_pkt_sizes))     # to add and test x
         else:
             bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min = [0]*4
 
 
         # packet inter-arrival times
         if len(flow_iats)!=0:
-            flow_iat_total = float(np.sum(flow_iats))           # to add and test
+            flow_iat_total = float(np.sum(flow_iats))           # to add and test x
             flow_iat_mean = float(np.mean(flow_iats))
             flow_iat_std = float(np.std(flow_iats))
             flow_iat_max = float(np.max(flow_iats))
@@ -451,41 +457,24 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min=[0]*5
 
         # flag counts (ip/tcp)
-        flow_df_count,flow_mf_count,flow_fin_count,flow_syn_count,flow_rst_count,flow_psh_count,flow_ack_count,flow_urg_count,flow_ece_count,flow_cwr_count= [0]*10           # to add and test
+        flow_flag_counts = [0]*10           # to add and test x
         
-        # hmm.....
-        for flag in flow_flags:
-            if flag[0]==True:
-                flow_df_count+=1
-            if flag[1]==True:
-                flow_mf_count+=1
-            if flag[2]==True:
-                flow_fin_count+=1
-            if flag[3]==True:
-                flow_syn_count+=1
-            if flag[4]==True:
-                flow_rst_count+=1
-            if flag[5]==True:
-                flow_psh_count+=1
-            if flag[6]==True:
-                flow_ack_count+=1
-            if flag[7]==True:
-                flow_urg_count+=1
-            if flag[8]==True:
-                flow_ece_count+=1
-            if flag[9]==True:
-                flow_cwr_count+=1
+        for flags in flow_flags:
+            for i,flag in enumerate(flags):
+                if flag:
+                    flow_flag_counts[i]+=1
 
         flow_properties = \
-            [flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,fwd_pkt_size_mean,bwd_pkt_size_mean,fwd_pkt_size_min,flow_duration,fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,\
-            flow_bytes_per_sec,flow_pkt_len_mean,flow_pkt_len_std,flow_pkt_len_var,flow_pkt_len_max,flow_pkt_len_min,\
-            fwd_pkt_len_total,fwd_pkt_len_mean,fwd_pkt_len_std,fwd_pkt_len_max,fwd_pkt_len_min,\
-            bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_max,bwd_pkt_len_min,\
-            fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,fwd_pkt_size_mean,bwd_pkt_size_mean,fwd_pkt_size_min,\
-            flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min,\
+            [flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,flow_pkt_size_std,flow_pkt_size_max,flow_pkt_size_min,\
+            fwd_pkt_size_mean,fwd_pkt_size_std,fwd_pkt_size_max,bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min,fwd_pkt_size_min,flow_duration,\
+            fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,flow_bytes_per_sec,\
+            flow_pkt_len_total,flow_pkt_len_mean,flow_pkt_len_std,flow_pkt_len_var,flow_pkt_len_max,flow_pkt_len_min,\
+            fwd_pkt_len_total,fwd_pkt_len_mean,fwd_pkt_len_std,fwd_pkt_len_var,fwd_pkt_len_max,fwd_pkt_len_min,\
+            bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_var,bwd_pkt_len_max,bwd_pkt_len_min,\
+            flow_iat_total,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min,\
             fwd_iat_total,fwd_iat_mean,fwd_iat_std,fwd_iat_max,fwd_iat_min,\
             bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min,\
-            flow_n_data_pkts,fwd_n_data_pkts,bwd_n_data_pkts,label]
+            flow_n_data_pkts,fwd_n_data_pkts,bwd_n_data_pkts] + flow_flag_counts + [label]
         yield flow_properties
         if verbose: bar.next()
     if verbose: bar.finish()
@@ -494,7 +483,7 @@ def generate_dataset(outdir,filename,yielded_flows_features):
     outdir = args.outdir + '/'
     outfilename, _ = os.path.splitext(os.path.basename(filename))
     outfile = open(outdir+outfilename+'.csv','w')
-    features_header = 'flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,fwd_pkt_size_mean,bwd_pkt_size_mean,fwd_pkt_size_min,flow_duration,fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,flow_bytes_per_sec,flow_pkt_len_mean,flow_pkt_len_std,flow_pkt_len_var,flow_pkt_len_max,flow_pkt_len_min,fwd_pkt_len_total,fwd_pkt_len_mean,fwd_pkt_len_std,fwd_pkt_len_max,fwd_pkt_len_min,bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_max,bwd_pkt_len_min,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,fwd_pkt_size_mean,bwd_pkt_size_mean,fwd_pkt_size_min,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min,fwd_iat_total,fwd_iat_mean,fwd_iat_std,fwd_iat_max,fwd_iat_min,bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min,flow_n_data_pkts,fwd_n_data_pkts,bwd_n_data_pkts,label\n'
+    features_header = 'flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,flow_pkt_size_std,flow_pkt_size_max,flow_pkt_size_min,fwd_pkt_size_mean,fwd_pkt_size_std,fwd_pkt_size_max,bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min,fwd_pkt_size_min,flow_duration,fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,flow_bytes_per_sec,flow_pkt_len_total,flow_pkt_len_mean,flow_pkt_len_std,flow_pkt_len_var,flow_pkt_len_max,flow_pkt_len_min,fwd_pkt_len_total,fwd_pkt_len_mean,fwd_pkt_len_std,fwd_pkt_len_var,fwd_pkt_len_max,fwd_pkt_len_min,bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_var,bwd_pkt_len_max,bwd_pkt_len_min,flow_iat_total,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min,fwd_iat_total,fwd_iat_mean,fwd_iat_std,fwd_iat_max,fwd_iat_min,bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min,flow_n_data_pkts,fwd_n_data_pkts,bwd_n_data_pkts,flow_df_count,flow_mf_count,flow_fin_count,flow_syn_count,flow_rst_count,flow_psh_count,flow_ack_count,flow_urg_count,flow_ece_count,flow_cwr_count,label\n'
     features_len = len(features_header.split(',')) - 1
     outfile.write(features_header)
     for flow_features in yielded_flows_features:
