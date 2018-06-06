@@ -17,9 +17,12 @@ fi
 [[ -d new/test/malign ]] || mkdir -p new/test/malign
 [[ -d new/test/benign ]] || mkdir -p new/test/benign 	# need benigns
 
-python tk_flowmeter.py pcap/train/bruteforce/tekever-*.pcap -l bruteforce $verbose -o new/train/malign
-python tk_flowmeter.py pcap/train/portscan/tekever-portscan.pcap -l portscan $verbose -o new/train/malign
-python tk_flowmeter.py pcap/train/fastdos/tekever-*.pcap -l fastdos $verbose -o new/train/malign
+#python tk_flowmeter.py pcap/train/bruteforce/tekever-*.pcap -l bruteforce $verbose -o new/train/malign
+#python tk_flowmeter.py pcap/train/portscan/tekever-portscan.pcap -l portscan $verbose -o new/train/malign
+#python tk_flowmeter.py pcap/train/fastdos/tekever-*.pcap -l fastdos $verbose -o new/train/malign
+python tk_flowmeter.py pcap/train/bruteforce/received-new*.pcap -l bruteforce $verbose -o new/train/malign
+python tk_flowmeter.py pcap/train/portscan/received-new-nmap.pcap -l portscan $verbose -o new/train/malign
+python tk_flowmeter.py pcap/train/fastdos/received-new*.pcap -l fastdos $verbose -o new/train/malign
 python tk_flowmeter.py pcap/train/benign/Monday-WorkingHours.pcap -l benign $verbose -o new/train/benign
 
 python tk_flowmeter.py pcap/test/bruteforce/*.pcap -l bruteforce $verbose -o new/test/malign

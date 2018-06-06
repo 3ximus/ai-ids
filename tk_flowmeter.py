@@ -188,7 +188,7 @@ def parse_duplicates(uniflow_ids,verbose):
             duplicates_parsed.append((uniflow_id[2],uniflow_id[3],uniflow_id[0],uniflow_id[1],uniflow_id[4],uniflow_id[5]))
         if verbose: bar.next()
     if verbose: bar.finish()
-    return duplicates_parsed
+    return list(OrderedDict.fromkeys(duplicates_parsed))
 
 def build_nsp_flows(uniflows, duplicates_parsed, verbose):
     #join unidirectional flow information into its bidirectional flow equivalent
