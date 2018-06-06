@@ -1,12 +1,10 @@
+#!/usr/bin/env python
 # tcp flow definition was not simple to achieve. It may still present errors in extreme cases, but it is working really well as far as I can tell
 # creator: joao meira (joao.meira@tekever.com)
 from __future__ import print_function
 import dpkt
 import datetime
 import socket
-import binascii
-import struct
-import random
 import argparse
 import numpy as np
 import os
@@ -14,7 +12,6 @@ import time
 
 from dpkt.compat import compat_ord
 from collections import OrderedDict
-from operator import itemgetter
 from progress.bar import Bar
 
 # =====================
@@ -100,11 +97,11 @@ def process_pcap(file,verbose):
         # Pull out fragment information
         do_not_fragment = bool(ip.off & dpkt.ip.IP_DF)
         more_fragments = bool(ip.off & dpkt.ip.IP_MF)
-        fragment_offset = ip.off & dpkt.ip.IP_OFFMASK
-        
+        # fragment_offset = ip.off & dpkt.ip.IP_OFFMASK
+
         transport_layer=ip.data
         transport_protocol_name=type(transport_layer).__name__
-        
+
         if transport_protocol_name in ('TCP'):
             n_pkts+=1
             if transport_protocol_name=='TCP':
@@ -118,7 +115,7 @@ def process_pcap(file,verbose):
                 urg_flag = ( transport_layer.flags & dpkt.tcp.TH_URG ) != 0
                 ece_flag = ( transport_layer.flags & dpkt.tcp.TH_ECE ) != 0
                 cwr_flag = ( transport_layer.flags & dpkt.tcp.TH_CWR ) != 0
-                tcp_seq = transport_layer.seq               # tcp seq number: not used to separate/select flows as the implemented rules alone seem to be working really fine
+                # tcp_seq = transport_layer.seq               # tcp seq number: not used to separate/select flows as the implemented rules alone seem to be working really fine
             elif transport_protocol_name=='UDP':
                 n_udp+=1
                 transport_protocol_code=17
@@ -135,7 +132,7 @@ def process_pcap(file,verbose):
                 eth_padding_bytes = pkt_len - header_len
                 # header len will ignore eth padding bytes
                 pkt_len = pkt_len - eth_padding_bytes
-                pkt_size = pkt_len - header_len                         # ethernet zero-byte padding until 64 bytes are reached                    
+                pkt_size = pkt_len - header_len                         # ethernet zero-byte padding until 64 bytes are reached
 
             if pkt_size!=len(transport_layer.data) and args.check_transport_data_length:
                 print("Error on packet no." + str(n_pkts) + ".Packet size should always correspond to tcp data length.")
@@ -147,7 +144,7 @@ def process_pcap(file,verbose):
                 fin_flag,syn_flag,rst_flag,psh_flag,ack_flag,urg_flag,ece_flag,cwr_flag) if transport_protocol_name=='TCP'\
                 else (direction_id,str(datetime.datetime.utcfromtimestamp(timestamp)),pkt_len,header_len,pkt_size,do_not_fragment,more_fragments)
             packet_properties.append(packet_info)
-            eventually_useful = (mac_addr(eth.src),mac_addr(eth.dst),eth.type,fragment_offset)
+            # eventually_useful = (mac_addr(eth.src),mac_addr(eth.dst),eth.type,fragment_offset)
             if verbose: bar.next()
     if verbose:
         bar.finish()
@@ -157,22 +154,22 @@ def process_pcap(file,verbose):
     return packet_properties
 
 def build_uniflows(packet_properties,verbose):
-        #associate uniflow_ids to packets
-        uniflows = dict()
-        uniflow_ids = []
-        if verbose: bar = Bar('Creating unidirectional flows', max=len(packet_properties))
-        for propertie in packet_properties:
-            uniflow_ids.append(propertie[0])
-            if propertie[0] in uniflows:
-                uniflows[propertie[0]].append(propertie)
-            else:
-                uniflows[propertie[0]]=[propertie]
-            if verbose: bar.next()
-        uniflow_ids=list(OrderedDict.fromkeys(uniflow_ids))             #remove duplicates mantaining order
-        if verbose:
-            bar.finish()
-            print('Number of unidirectional flows (w/o flag separation):',len(uniflow_ids))
-        return uniflows,uniflow_ids
+    #associate uniflow_ids to packets
+    uniflows = dict()
+    uniflow_ids = []
+    if verbose: bar = Bar('Creating unidirectional flows', max=len(packet_properties))
+    for propertie in packet_properties:
+        uniflow_ids.append(propertie[0])
+        if propertie[0] in uniflows:
+            uniflows[propertie[0]].append(propertie)
+        else:
+            uniflows[propertie[0]]=[propertie]
+        if verbose: bar.next()
+    uniflow_ids=list(OrderedDict.fromkeys(uniflow_ids))             #remove duplicates mantaining order
+    if verbose:
+        bar.finish()
+        print('Number of unidirectional flows (w/o flag separation):',len(uniflow_ids))
+    return uniflows,uniflow_ids
 
 def parse_duplicates(uniflow_ids,verbose):
     #join unidirectional flows with their counterpart (flows/conversations)
@@ -200,7 +197,7 @@ def build_nsp_flows(uniflows, duplicates_parsed, verbose):
     while(j<len(duplicates_parsed)):
         nsp_flow_id = duplicates_parsed[j]
         duplicate_id = duplicates_parsed[j+1]
-        # have in mind every flow_id in this list will constitute the first packet ever recorded in that flow, 
+        # have in mind every flow_id in this list will constitute the first packet ever recorded in that flow,
         # which is assumed to be the first request, i.e., a 'forward' packet
         nsp_flow_ids.append(nsp_flow_id)
         try:
@@ -232,7 +229,7 @@ def build_tcpflows(nsp_flows,nsp_flow_ids,verbose):
         flow_n_pkts = len(flow)
 
         if flow_n_pkts==0:
-            raise ValueError, 'The flow can\'t have 0 packets.'
+            raise ValueError('The flow can\'t have 0 packets.')
         elif flow_n_pkts in (1,2,3):     #1/2/3 pacotes num so nsp_flow_id perfazem no maximo 1 e 1 so flow
             flows[key] = flow
             flow_ids.append(key)
@@ -252,7 +249,7 @@ def build_tcpflows(nsp_flows,nsp_flow_ids,verbose):
                 else:               # other packets
                     fin2,syn2,rst2,psh2,ack2,urg2,ece2,cwr2=flow[i+1][-8:]
                     fin3,syn3,rst3,psh3,ack3,urg3,ece3,cwr3=flow[i+2][-8:]
-                
+
                 ###### TCP FLOW RULES ######
                 # r1,r2: begin flow
                 r1 = (syn1 and not ack1) and (syn2 and ack2) and ack3           # 3-way handshake (full-duplex), syn+syn-ack+ack / syn+syn-ack+syn-ack
@@ -260,7 +257,7 @@ def build_tcpflows(nsp_flows,nsp_flow_ids,verbose):
                 # r3,r4: end flow
                 r3 = fin1 and (fin2 and ack2) and ack3
                 r4 = rst1 and not rst2
-                
+
                 # consider flow begin or ignore it (considering it is safer, but not considering it will leave out flows that have started before the capture)
                 # the only rule used will be the half-duplex handshake rule because it is inclusive of the full-duplex handshake rule
                 if r2:
@@ -289,6 +286,7 @@ def build_tcpflows(nsp_flows,nsp_flow_ids,verbose):
     return flows,flow_ids
 
 def calculate_flows_features(flows,flow_ids,label,verbose):
+    '''This function is a generator'''
     flow_properties=[]
     if verbose: bar = Bar('Performing scary statistics', max=len(flow_ids))
     for flow_id in flow_ids:
@@ -376,8 +374,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             flow_pkts_per_sec = flow_n_pkts/flow_duration
             fwd_pkts_per_sec = fwd_n_pkts/flow_duration
             bwd_pkts_per_sec = bwd_n_pkts/flow_duration
-            
-
+ 
         # packet lengths
         flow_pkt_len_total = float(np.sum(flow_pkt_lens))           # to add and test x
         flow_bytes_per_sec = 0 if flow_duration==0 else float(flow_pkt_len_total/flow_duration)
@@ -402,7 +399,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             bwd_pkt_len_max = float(np.max(bwd_pkt_lens))
             bwd_pkt_len_min = float(np.min(bwd_pkt_lens))
         else:
-            bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_var,bwd_pkt_len_max,bwd_pkt_len_min = [0]*6
+            bwd_pkt_len_total = bwd_pkt_len_mean = bwd_pkt_len_std = bwd_pkt_len_var = bwd_pkt_len_max = bwd_pkt_len_min = 0
 
         # header lengths
         fwd_header_len_total = float(np.sum(fwd_header_lens))                                    # 14 byte Ether header + ip header + tcp/udp header
@@ -425,7 +422,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             bwd_pkt_size_max = float(np.max(bwd_pkt_sizes))     # to add and test x
             bwd_pkt_size_min = float(np.min(bwd_pkt_sizes))     # to add and test x
         else:
-            bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min = [0]*4
+            bwd_pkt_size_mean = bwd_pkt_size_std = bwd_pkt_size_max = bwd_pkt_size_min = 0
 
 
         # packet inter-arrival times
@@ -436,7 +433,8 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             flow_iat_max = float(np.max(flow_iats))
             flow_iat_min = float(np.min(flow_iats))
         else:
-            flow_iat_total,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min = [0]*5
+            flow_iat_total = flow_iat_mean = flow_iat_std = flow_iat_max = flow_iat_min = 0
+
 
         if len(fwd_iats)!=0:
             fwd_iat_total = float(np.sum(fwd_iats))
@@ -445,7 +443,8 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             fwd_iat_max = float(np.max(fwd_iats))
             fwd_iat_min = float(np.min(fwd_iats))
         else:
-            fwd_iat_total,fwd_iat_mean,fwd_iat_std,fwd_iat_max,fwd_iat_min = [0]*5
+            fwd_iat_total = fwd_iat_mean = fwd_iat_std = fwd_iat_max = fwd_iat_min = 0
+
 
         if len(bwd_iats)!=0:
             bwd_iat_total = float(np.sum(bwd_iats))
@@ -454,11 +453,12 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             bwd_iat_max = float(np.max(bwd_iats))
             bwd_iat_min = float(np.min(bwd_iats))
         else:
-            bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min=[0]*5
+            bwd_iat_total = bwd_iat_mean = bwd_iat_std = bwd_iat_max = bwd_iat_min = 0
+
 
         # flag counts (ip/tcp)
         flow_flag_counts = [0]*10           # to add and test x
-        
+
         for flags in flow_flags:
             for i,flag in enumerate(flags):
                 if flag:
@@ -479,41 +479,36 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
         if verbose: bar.next()
     if verbose: bar.finish()
 
-def generate_dataset(outdir,filename,yielded_flows_features):
+def generate_dataset(outdir,filename,flow_features_generator):
     outdir = args.outdir + '/'
     outfilename, _ = os.path.splitext(os.path.basename(filename))
-    outfile = open(outdir+outfilename+'.csv','w')
     features_header = 'flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,flow_pkt_size_std,flow_pkt_size_max,flow_pkt_size_min,fwd_pkt_size_mean,fwd_pkt_size_std,fwd_pkt_size_max,bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min,fwd_pkt_size_min,flow_duration,fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,flow_bytes_per_sec,flow_pkt_len_total,flow_pkt_len_mean,flow_pkt_len_std,flow_pkt_len_var,flow_pkt_len_max,flow_pkt_len_min,fwd_pkt_len_total,fwd_pkt_len_mean,fwd_pkt_len_std,fwd_pkt_len_var,fwd_pkt_len_max,fwd_pkt_len_min,bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_var,bwd_pkt_len_max,bwd_pkt_len_min,flow_iat_total,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min,fwd_iat_total,fwd_iat_mean,fwd_iat_std,fwd_iat_max,fwd_iat_min,bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min,flow_n_data_pkts,fwd_n_data_pkts,bwd_n_data_pkts,flow_df_count,flow_mf_count,flow_fin_count,flow_syn_count,flow_rst_count,flow_psh_count,flow_ack_count,flow_urg_count,flow_ece_count,flow_cwr_count,label\n'
-    features_len = len(features_header.split(',')) - 1
-    outfile.write(features_header)
-    for flow_features in yielded_flows_features:
-        outfile.write(flow_id_to_str(flow_features[0])+',')
-        for i,feature in enumerate(flow_features[1:]):
-            if i==features_len-1:
-                outfile.write(str(feature)+'\n')
-            else:
-                outfile.write(str(feature)+',')
-    outfile.close()
+    with open(outdir+outfilename+'.csv','w') as outfile:
+        features_len = len(features_header.split(',')) - 1
+        outfile.write(features_header)
+        for flow_features in flow_features_generator:
+            outfile.write(gen_flow_str(flow_features))
+
+def gen_flow_str(flow_features):
+    return flow_id_to_str(flow_features[0]) + ',' + ','.join(map(str,flow_features[1:])) + '\n'
 
 # PRINT FLOWS
 def print_flows(file):
     start_time = time.time()
-    
+
     packet_properties = process_pcap(file, args.verbose)
     uniflows,uniflow_ids = build_uniflows(packet_properties, args.verbose)
     del(packet_properties)
     duplicates_parsed = parse_duplicates(uniflow_ids,args.verbose)
     del(uniflow_ids)
-    nsp_flows,nsp_flow_ids = build_nsp_flows(uniflows, duplicates_parsed, args.verbose)
+    flows,flow_ids = build_nsp_flows(uniflows, duplicates_parsed, args.verbose)
     del(uniflows)
     del(duplicates_parsed)
-    flows,flow_ids = build_tcpflows(nsp_flows,nsp_flow_ids, args.verbose) # At this point, flow_ids are ordered by the flow start time and the packets in each flow are internally ordered by their timestamp
-    del(nsp_flow_ids)
-    del(nsp_flows)
+    flows,flow_ids = build_tcpflows(flows, flow_ids, args.verbose) # At this point, flow_ids are ordered by the flow start time and the packets in each flow are internally ordered by their timestamp
 
     # Print some information about the selected flows
     if args.verbose:
-        all_pkts=0 
+        all_pkts=0
         for flow_id in flow_ids:
             all_pkts+=len(flows[flow_id])
         print('Number of packets included in the flows\' analysis:',all_pkts)
@@ -524,9 +519,9 @@ def print_flows(file):
         print('This pcap doesn\'t have any communication that satisfies our flow definition. Abort.')
         return
 
-    yielded_flows_features = calculate_flows_features(flows,flow_ids,args.label,args.verbose)
+    flow_features_generator = calculate_flows_features(flows,flow_ids,args.label,args.verbose)
     # Generate csv file
-    generate_dataset(args.outdir+os.sep,file.name,yielded_flows_features)
+    generate_dataset(args.outdir+os.sep, file.name, flow_features_generator)
 
     print("Dataset generated in " + colors.BLUE + str(time.time() - start_time) + colors.ENDC + " seconds")
 
