@@ -34,6 +34,7 @@ op.add_argument('-l', '--label', help="label all the flows", dest='label', defau
 op.add_argument('-o', '--out-dir', help="output directory", dest='outdir', default='.'+os.sep)
 op.add_argument('-c', '--check-transport-data-length', action='store_true', help='verbose output', dest='check_transport_data_length')
 op.add_argument('-v', '--verbose', action='store_true', help='verbose output', dest='verbose')
+op.add_argument('-C', '--comms', action='store_true', help="create flows for each communication", dest='comms')
 
 args = op.parse_args()
 
@@ -42,8 +43,15 @@ datetime_format2 = "%Y-%m-%d %H:%M:%S"
 scale_factor = 0.001    # milliseconds --> seconds
 packet_len_minimum = 64
 
+def flow_id_to_communication_id(flow_id):
+    splitted_flow_id = flow_id.split('-')
+    return splitted_flow_id[0] + '-' + splitted_flow_id[2]
+
+def gen_flow_str(flow_features):
+    return flow_id_to_str(flow_features[0]) + ',' + ','.join(map(str,flow_features[1:])) + '\n'
+
 def flow_id_to_str(flow_id):
-    return flow_id[0] + '-' + str(flow_id[1]) + '-' + flow_id[2] + '-' + str(flow_id[3]) + '-' + str(flow_id[4]) + '-' + str(flow_id[5])
+    return '-'.join(map(str,flow_id))
 
 def unix_time_millis(dt):
     epoch = datetime.datetime.utcfromtimestamp(0)
@@ -480,17 +488,28 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
     if verbose: bar.finish()
 
 def generate_dataset(outdir,filename,flow_features_generator):
+    communications = dict()
     outdir = args.outdir + '/'
     outfilename, _ = os.path.splitext(os.path.basename(filename))
     features_header = 'flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,flow_pkt_size_std,flow_pkt_size_max,flow_pkt_size_min,fwd_pkt_size_mean,fwd_pkt_size_std,fwd_pkt_size_max,bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min,fwd_pkt_size_min,flow_duration,fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,flow_bytes_per_sec,flow_pkt_len_total,flow_pkt_len_mean,flow_pkt_len_std,flow_pkt_len_var,flow_pkt_len_max,flow_pkt_len_min,fwd_pkt_len_total,fwd_pkt_len_mean,fwd_pkt_len_std,fwd_pkt_len_var,fwd_pkt_len_max,fwd_pkt_len_min,bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_var,bwd_pkt_len_max,bwd_pkt_len_min,flow_iat_total,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min,fwd_iat_total,fwd_iat_mean,fwd_iat_std,fwd_iat_max,fwd_iat_min,bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min,flow_n_data_pkts,fwd_n_data_pkts,bwd_n_data_pkts,flow_df_count,flow_mf_count,flow_fin_count,flow_syn_count,flow_rst_count,flow_psh_count,flow_ack_count,flow_urg_count,flow_ece_count,flow_cwr_count,label\n'
-    with open(outdir+outfilename+'.csv','w') as outfile:
-        features_len = len(features_header.split(',')) - 1
+    
+    features_len = len(features_header.split(',')) - 1
+    if not args.comms: 
+        outfile = open(outdir+outfilename+'.csv','w')
         outfile.write(features_header)
-        for flow_features in flow_features_generator:
+        close_files = lambda: oufile.close()
+    for flow_features in flow_features_generator:
+        if args.comms:
+            flow_id = flow_features[0]
+            if flow_id not in communications:
+                communications[flow_id]=open(outdir+flow_id_to_communication_id(flow_id),'w')
+                communications[flow_id].write(features_header)
+            communications[flow_id].write(gen_flow_str(flow_features))
+            close_files = lambda: [communications[k].close() for k in communications]
+        else:
             outfile.write(gen_flow_str(flow_features))
+    close_files()
 
-def gen_flow_str(flow_features):
-    return flow_id_to_str(flow_features[0]) + ',' + ','.join(map(str,flow_features[1:])) + '\n'
 
 # PRINT FLOWS
 def print_flows(file):
