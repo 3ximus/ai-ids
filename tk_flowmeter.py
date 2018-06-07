@@ -497,7 +497,7 @@ def generate_dataset(outdir,filename,flow_features_generator):
     if not args.comms: 
         outfile = open(outdir+outfilename+'.csv','w')
         outfile.write(features_header)
-        close_files = lambda: oufile.close()
+        close_files = lambda: outfile.close()
     for flow_features in flow_features_generator:
         if args.comms:
             flow_id = flow_features[0]
