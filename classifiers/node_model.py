@@ -163,12 +163,13 @@ class NodeModel:
             # train and save the model
             self.log(MessageType.log,"Training %s" % self.node_name, force_log=True)
             try:
-                if(self.unsupervised):
+                if self.unsupervised:
                     self.model.fit(X_train)
                 else:
                     self.model.fit(X_train, y_train)
             except ValueError as err:
                 self.log(MessageType.error, "Problem found when training model, this classifier might be a regressor:\n%s\nIf it is, use 'regressor' option in configuration file" % self.model)
+                self.log(MessageType.error, err)
                 exit()
             except TypeError:
                 self.log(MessageType.error, "Problem found when training model, this classifier might not be unsupervised:\n%s" % self.model)

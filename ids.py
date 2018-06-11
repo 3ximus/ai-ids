@@ -87,7 +87,7 @@ def predict_chunk(test_data, use_l2=True):
     if not args.verbose: print_curses_stats(use_l2)
     if use_l2:
         # OUTPUT DATA PARTITION TO FEED LAYER 2
-        labels_index = np.argmax(y_predicted, axis=1)
+        labels_index = np.argmax(y_predicted, axis=1) if not l1.use_regressor else y_predicted
         # ignore test_data[1] since its only used for l1 crossvalidation
         filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                    np.take(test_data[2], np.where(labels_index == x)[0], axis=0)] # labels
@@ -154,6 +154,8 @@ if L2_NODE_NAMES:
             total_fp += l2_nodes[node].stats.fp[np.argmax(l2_nodes[node].outputs['MALIGN'])]
             print(L2_NODE_NAMES[node])
             print(l2_nodes[node].stats)
+            print("Precision %6f" % (l2_nodes[node].stats.tp / (l2_nodes[node].stats.tp + l2_nodes[node].stats.fp[1])))
+            print("Recall %6f" % (l2_nodes[node].stats.tp / (l2_nodes[node].stats.tp + l2_nodes[node].stats.fp[0])))
 
     print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
     # print("Count:  \033[1;32m%9d\033[m | \033[1;31m%d\033[m" % tuple(output_counter))
