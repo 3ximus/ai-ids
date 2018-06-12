@@ -8,6 +8,8 @@ build/*
 csv
 pcap
 dist
+new
+
 # data
 csv/*
 pcap/*

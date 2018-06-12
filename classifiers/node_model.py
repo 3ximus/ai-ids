@@ -139,8 +139,6 @@ class NodeModel:
             for i, line in enumerate(fd):
                 tmp = line.strip('\n').split(',')       
                 #x_in.append(tmp[1:-1])
-                # index_subset: all but time-related features
-                #index_subset=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67]
                 x_in.append([tmp[i] for i in index_subset])
                 y_in.append(tmp[-1]) # choose result based on label
                 flow_ids.append(tmp[0])
@@ -163,7 +161,8 @@ class NodeModel:
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
-        return [x, y, labels,flow_ids]
+        flow_ids = np.array(flow_ids)
+        return [x, y, labels, flow_ids]
 
     def train(self, train_filename, disable_load=False):
         '''Create or load train model from given dataset and apply it to the test dataset

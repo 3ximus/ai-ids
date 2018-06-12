@@ -208,3 +208,4 @@ else:
             of.write("Bruteforce:" + str(bruteforce_count) + "\n")
             of.write("Certainty:" + str((1-benign_ratio)*100) + "%\n")
     of.close()
+
