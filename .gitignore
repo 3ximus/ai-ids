@@ -8,13 +8,15 @@ build/*
 csv
 pcap
 dist
+new
+
 # data
 csv/*
 pcap/*
 dist/*
 saved_neural_networks/*
 results/*
-
+new/*
 
 # virtual environment
 IDS/*

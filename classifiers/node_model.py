@@ -3,7 +3,6 @@ import os, pickle, hashlib, threading
 from sklearn.metrics import accuracy_score, confusion_matrix
 import numpy as np
 
-
 class NodeModel:
     '''Class to train and apply classifier/regressor models'''
 
@@ -82,8 +81,8 @@ class NodeModel:
         used_model_md5.update(classifier_settings.encode('utf-8'))
         return base_path + '/%s-%s' % (train_filename[:-4].replace('/','-'), used_model_md5.hexdigest()[:7])
 
-
-    def parse_csvdataset(self, filename):
+    # compacted (REMOVEME)
+    def parse_compacted_csvdataset(self, filename):
         '''Parse entire dataset and return processed np.array with x and y'''
         x_in, y_in = [], []
         with open(filename, 'r') as fd:
@@ -93,7 +92,7 @@ class NodeModel:
                 y_in.append(tmp[-1]) # choose result based on label
         return self.process_data(x_in, y_in)
 
-    def yield_csvdataset(self, filename, n_chunks):
+    def yield_compactedcsvdataset(self, filename, n_chunks):
         '''Iterate over dataset, yielding np.array with x and y in chunks of size n_chunks'''
         x_in, y_in = [], []
         with open(filename, 'r') as fd:
@@ -106,8 +105,49 @@ class NodeModel:
                     x_in, y_in = [], []
         yield self.process_data(x_in, y_in)
 
+    # normal csvs
+    def parse_csvdataset(self, filename):
+        '''Parse entire dataset and return processed np.array with x and y'''
+        flow_ids, x_in, y_in = [], [], []
+        with open(filename, 'r') as fd:
+            feature_string = fd.readline()
+            feature_string = feature_string.split(',')
+            index_subset=[]
+            for elem in feature_string:
+                if elem.find('iat')==-1 and elem.find('sec')==-1 and elem.find('duration')==-1 and elem!='label\n' and elem!='flow_id':
+                    index_subset.append(feature_string.index(elem))
+            for line in fd:
+                tmp = line.strip('\n').split(',')
+                #x_in.append(tmp[1:-1])
+                # index_subset: all but time-related features
+                #index_subset=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67]
+                x_in.append([tmp[i] for i in index_subset])
+                y_in.append(tmp[-1]) # choose result based on label
+                flow_ids.append(tmp[0])
+        return self.process_data(x_in, y_in, flow_ids)
 
-    def process_data(self, x, labels):
+    def yield_csvdataset(self, filename, n_chunks):
+        '''Iterate over dataset, yielding np.array with x and y in chunks of size n_chunks'''
+        flow_ids, x_in, y_in = [], [], []
+        with open(filename, 'r') as fd:
+            feature_string = fd.readline()
+            feature_string = feature_string.split(',')
+            index_subset=[]
+            for elem in feature_string:
+                if elem.find('iat')==-1 and elem.find('sec')==-1 and elem.find('duration')==-1 and elem!='label\n' and elem!='flow_id':
+                    index_subset.append(feature_string.index(elem))
+            for i, line in enumerate(fd):
+                tmp = line.strip('\n').split(',')       
+                #x_in.append(tmp[1:-1])
+                x_in.append([tmp[i] for i in index_subset])
+                y_in.append(tmp[-1]) # choose result based on label
+                flow_ids.append(tmp[0])
+                if (i+1) % n_chunks == 0:
+                    yield self.process_data(x_in, y_in, flow_ids)
+                    x_in, y_in = [], []
+        yield self.process_data(x_in, y_in, flow_ids)
+
+    def process_data(self, x, labels, flow_ids):
         '''Process data, y must be a list of labels, returns list with both lists converted to np.array'''
         y = []
         for i, label in enumerate(labels):
@@ -121,7 +161,8 @@ class NodeModel:
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
-        return [x, y, labels]
+        flow_ids = np.array(flow_ids)
+        return [x, y, labels, flow_ids]
 
     def train(self, train_filename, disable_load=False):
         '''Create or load train model from given dataset and apply it to the test dataset
@@ -145,8 +186,7 @@ class NodeModel:
         else:
             # CREATE NEW MODEL
 
-            X_train, y_train, _ = self.parse_csvdataset(train_filename)
-
+            X_train, y_train, _, flow_ids = self.parse_csvdataset(train_filename)
             # scaler setup
             if self.scaler_module:
                 exec('import '+ self.scaler_module) # import scaler module
@@ -183,8 +223,7 @@ class NodeModel:
         if not self.model:
             self.log(MessageType.error, "ERROR: A model hasn't been trained or loaded yet for %s. Run NodeModel.train" % self.node_name)
             exit()
-
-        X_test, y_test, _ = test_data
+        X_test, y_test, _, flow_ids = test_data
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
             scaler = self.load_model(self.saved_scaler_file)
@@ -207,8 +246,8 @@ class NodeModel:
         if self.unsupervised:
             y_predicted[y_predicted == 1] = 0
             y_predicted[y_predicted == -1] = 1
-        self.stats.update(y_predicted, y_test)
-        return y_predicted
+        self.stats.update(y_predicted, y_test, self.outputs)
+        return y_predicted,flow_ids
 
 
 class Stats:
