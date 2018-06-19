@@ -378,7 +378,7 @@ def calculate_flows_features(flows,flow_ids,label,verbose):
             flow_pkts_per_sec = flow_n_pkts/flow_duration
             fwd_pkts_per_sec = fwd_n_pkts/flow_duration
             bwd_pkts_per_sec = bwd_n_pkts/flow_duration
- 
+
         # packet lengths
         flow_pkt_len_total = float(np.sum(flow_pkt_lens))           # to add and test x
         flow_bytes_per_sec = 0 if flow_duration==0 else float(flow_pkt_len_total/flow_duration)
@@ -488,12 +488,11 @@ def generate_dataset(outdir,filename,flow_features_generator):
     outdir = args.outdir + '/'
     outfilename, _ = os.path.splitext(os.path.basename(filename))
     features_header = 'flow_id,fwd_header_len_total,bwd_header_len_total,flow_pkt_size_mean,flow_pkt_size_std,flow_pkt_size_max,flow_pkt_size_min,fwd_pkt_size_mean,fwd_pkt_size_std,fwd_pkt_size_max,bwd_pkt_size_mean,bwd_pkt_size_std,bwd_pkt_size_max,bwd_pkt_size_min,fwd_pkt_size_min,flow_duration,fwd_n_pkts,bwd_n_pkts,flow_pkts_per_sec,fwd_pkts_per_sec,bwd_pkts_per_sec,flow_bytes_per_sec,flow_pkt_len_total,flow_pkt_len_mean,flow_pkt_len_std,flow_pkt_len_var,flow_pkt_len_max,flow_pkt_len_min,fwd_pkt_len_total,fwd_pkt_len_mean,fwd_pkt_len_std,fwd_pkt_len_var,fwd_pkt_len_max,fwd_pkt_len_min,bwd_pkt_len_total,bwd_pkt_len_mean,bwd_pkt_len_std,bwd_pkt_len_var,bwd_pkt_len_max,bwd_pkt_len_min,flow_iat_total,flow_iat_mean,flow_iat_std,flow_iat_max,flow_iat_min,fwd_iat_total,fwd_iat_mean,fwd_iat_std,fwd_iat_max,fwd_iat_min,bwd_iat_total,bwd_iat_mean,bwd_iat_std,bwd_iat_max,bwd_iat_min,flow_n_data_pkts,fwd_n_data_pkts,bwd_n_data_pkts,flow_df_count,flow_mf_count,flow_fin_count,flow_syn_count,flow_rst_count,flow_psh_count,flow_ack_count,flow_urg_count,flow_ece_count,flow_cwr_count,label\n'
-    
-    features_len = len(features_header.split(',')) - 1
-    if not args.comms: 
+
+    if not args.comms:
         outfile = open(outdir+outfilename+'.csv','w')
         outfile.write(features_header)
-        close_files = lambda: outfile.close()
+        close_files = outfile.close
     for flow_features in flow_features_generator:
         if args.comms:
             flow_id = flow_features[0]

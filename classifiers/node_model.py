@@ -37,6 +37,8 @@ class NodeModel:
                                     if config.has_option(node_name, 'classifier-module') else None
 
         self.model = None # leave uninitialized (run self.train)
+        self.saved_model_file = None
+        self.saved_scaler_file = None
         self.stats = Stats(self)
 
 
@@ -54,7 +56,7 @@ class NodeModel:
     def load_model(filename):
         '''Load the model from disk'''
         if not os.path.isfile(filename):
-            self.log(MessageType.error, "File %s does not exist." % filename)
+            print("File %s does not exist." % filename)
             exit()
         model_file = open(filename, 'rb')
         loaded_model = pickle.load(model_file)
@@ -80,30 +82,6 @@ class NodeModel:
         used_model_md5 = hashlib.md5()
         used_model_md5.update(classifier_settings.encode('utf-8'))
         return base_path + '/%s-%s' % (train_filename[:-4].replace('/','-'), used_model_md5.hexdigest()[:7])
-
-    # compacted (REMOVEME)
-    def parse_compacted_csvdataset(self, filename):
-        '''Parse entire dataset and return processed np.array with x and y'''
-        x_in, y_in = [], []
-        with open(filename, 'r') as fd:
-            for line in fd:
-                tmp = line.strip('\n').split(',')
-                x_in.append(tmp[1:-1])
-                y_in.append(tmp[-1]) # choose result based on label
-        return self.process_data(x_in, y_in)
-
-    def yield_compactedcsvdataset(self, filename, n_chunks):
-        '''Iterate over dataset, yielding np.array with x and y in chunks of size n_chunks'''
-        x_in, y_in = [], []
-        with open(filename, 'r') as fd:
-            for i, line in enumerate(fd):
-                tmp = line.strip('\n').split(',')
-                x_in.append(tmp[1:-1])
-                y_in.append(tmp[-1]) # choose result based on label
-                if (i+1) % n_chunks == 0:
-                    yield self.process_data(x_in, y_in)
-                    x_in, y_in = [], []
-        yield self.process_data(x_in, y_in)
 
     # normal csvs
     def parse_csvdataset(self, filename):
@@ -137,7 +115,7 @@ class NodeModel:
                 if elem.find('iat')==-1 and elem.find('sec')==-1 and elem.find('duration')==-1 and elem!='label\n' and elem!='flow_id':
                     index_subset.append(feature_string.index(elem))
             for i, line in enumerate(fd):
-                tmp = line.strip('\n').split(',')       
+                tmp = line.strip('\n').split(',')
                 #x_in.append(tmp[1:-1])
                 x_in.append([tmp[i] for i in index_subset])
                 y_in.append(tmp[-1]) # choose result based on label
@@ -150,14 +128,14 @@ class NodeModel:
     def process_data(self, x, labels, flow_ids):
         '''Process data, y must be a list of labels, returns list with both lists converted to np.array'''
         y = []
-        for i, label in enumerate(labels):
+        for label in labels:
             # try to apply label to elf.outputs, if not existent use label mapping to find valid label conversion
             if label in self.outputs:
                 y.append(self.outputs[label]) # encode label into categorical ouptut classes
             elif label in self.label_map:
                 y.append(self.outputs[self.label_map[label]]) # if an error ocurrs here your label conversion is wrong
             else:
-                self.log(MessageType.error, "Unknown label %s. Add it to correct mapping section in config file" %label)
+                self.log(MessageType.error, "Unknown label %s. Add it to correct mapping section in config file" % label)
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
@@ -186,7 +164,7 @@ class NodeModel:
         else:
             # CREATE NEW MODEL
 
-            X_train, y_train, _, flow_ids = self.parse_csvdataset(train_filename)
+            X_train, y_train, _, _ = self.parse_csvdataset(train_filename)
             # scaler setup
             if self.scaler_module:
                 exec('import '+ self.scaler_module) # import scaler module
@@ -246,7 +224,7 @@ class NodeModel:
         if self.unsupervised:
             y_predicted[y_predicted == 1] = 0
             y_predicted[y_predicted == -1] = 1
-        self.stats.update(y_predicted, y_test, self.outputs)
+        self.stats.update(y_predicted, y_test)
         return y_predicted,flow_ids
 
 
@@ -285,7 +263,7 @@ class Stats:
         with self.lock:
             # confusion matrix
             lmsize = max(map(len, self.node.attack_keys[:-1])) # for output formatting
-            rep_str = " Pred\Real |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n"
+            rep_str = " Real\\Pred |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n"
             for i, label in enumerate(self.node.attack_keys):
                 rep_str += "%10s |" % label
                 for j in range(len(self.node.attack_keys)):
@@ -312,7 +290,7 @@ class Stats:
     def update_curses_screen(self, curses_screen, curses):
         with self.lock:
             lmsize = max(map(len, self.node.attack_keys[:-1])) # for output formatting
-            curses_screen.addstr(" Pred\Real |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n")
+            curses_screen.addstr(" Real\\Pred |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n")
             for i, label in enumerate(self.node.attack_keys):
                 curses_screen.addstr("%10s |" % label)
                 for j in range(len(self.node.attack_keys)):
