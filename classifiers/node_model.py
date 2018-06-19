@@ -233,7 +233,7 @@ class Stats:
 
     def __init__(self, node):
         self.node = node
-        self.n = self.tp = self.fp = self.fn = self.total_correct = 0
+        self.n = self.total_correct = 0
         self.confusion_matrix = np.matrix([[0 for x in range(len(node.outputs))] for x in range(len(node.outputs))])
         self.lock = threading.Lock()
 
@@ -247,17 +247,12 @@ class Stats:
         '''
 
         with self.lock:
-            self.total_correct += accuracy_score(y_test, y_predicted, normalize=False)
+            self.total_correct += accuracy_score(y_test, y_predicted, normalize=False) # counts only elements not classified as [0,0..,0]
+            # TODO FIXME Using np.argmax puts unclassified entries ([0,0,...,0]) as label zero, see previous code to count those
             x = np.argmax(y_test, axis=1) if len(y_test.shape) == 2 else y_test
             y = np.argmax(y_predicted, axis=1) if len(y_predicted.shape) == 2 else y_predicted
             self.confusion_matrix += np.matrix(confusion_matrix(x, y, labels=list(range(len(self.node.attack_keys)))))
-            # TODO FIXME Using np.argmax puts unclassified entries ([0,0,...,0]) as label zero, see previous code to count those
-
-            # calculate some metrics right away
             self.n = self.confusion_matrix.sum()
-            self.tp = sum(np.diag(self.confusion_matrix))
-            self.fp = [self.confusion_matrix[:,i].sum() - self.confusion_matrix[i,i] for i in range(len(self.confusion_matrix))]
-            self.fn = [self.confusion_matrix[i,:].sum() - self.confusion_matrix[i,i] for i in range(len(self.confusion_matrix))]
 
     def __repr__(self):
         with self.lock:
@@ -272,15 +267,27 @@ class Stats:
 
             # stats
             if len(self.node.attack_keys) == 2: # MALIGN OR BENIGN
-                positive = np.argmax(self.node.outputs['MALIGN']) # get index of MALIGN which will be considered positive
-                rep_str += "\033[1;34mTPR = %4f%%  FPR = %4f%%\033[m\n" % (self.tp*100./self.n, self.fp[positive]*100./self.n)
-            else:
-                rep_str += "\033[1;34mTPR = %4f%%\033[m\n" % (self.tp*100./self.n)
+                if np.argmax(self.node.outputs['MALIGN']) == 1:
+                    tn, fp, fn, tp = np.ravel(self.confusion_matrix)
+                else:
+                    tp, fn, fp, tn = np.ravel(self.confusion_matrix)
+                rep_str += "Overall Acc = %4f\n" % ((tp+tn)/self.n)
+                if self.node.verbose:
+                    if tp+fn:
+                        rep_str += "Recall = %4f\n" % (tp/(tp+fn))
+                        rep_str += "Miss Rate = %4f\n" % (fn/(tp+fn))
+                    if tn+fp:
+                        rep_str += "Specificity = %4f\n" % (tn/(tn+fp))
+                        rep_str += "Fallout = %4f\n" % (fp/(tn+fp))
+                    if tp+fp: rep_str += "Precision = %4f\n" % (tp/(tp+fp))
+                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % (2*tp/(2*tp+fp+fn))
+                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (((tp*tn)-(fp*fn))/np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
 
             # unidentified
-            if self.tp - self.total_correct:
+            diag = sum(np.diag(self.confusion_matrix))
+            if diag - self.total_correct:
                 rep_str += "Unidentified flows marked as \"%s\": \033[1;33m#%d\033[m\n" % \
-                    (self.node.attack_keys[0], self.tp - self.total_correct)
+                    (self.node.attack_keys[0], diag - self.total_correct)
 
             # append error messages
             for err_msg in self.node.message_buffer:
@@ -300,8 +307,6 @@ class Stats:
             if len(self.node.attack_keys) == 2: # MALIGN OR BENIGN
                 positive = np.argmax(self.node.outputs['MALIGN']) # get index of MALIGN which will be considered positive
                 curses_screen.addstr("TPR = %4f%%  FPR = %4f%%\n" % (self.tp*100./self.n, self.fp[positive]*100./self.n), curses.color_pair(5) | curses.A_BOLD)
-            else:
-                curses_screen.addstr("TPR = %4f%%\n" % (self.tp*100./self.n), curses.color_pair(5) | curses.A_BOLD)
 
             for err_msg in self.node.message_buffer:
                 curses_screen.addstr('[')

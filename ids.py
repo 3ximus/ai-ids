@@ -174,15 +174,10 @@ if not args.show_comms:
         if l2_nodes[node].stats.n > 0:
             total += l2_nodes[node].stats.n
             total_correct += l2_nodes[node].stats.total_correct
-            total_fp += l2_nodes[node].stats.fp[np.argmax(l2_nodes[node].outputs['MALIGN'])]
+            # total_fp += l2_nodes[node].stats.fp[np.argmax(l2_nodes[node].outputs['MALIGN'])]
             print(L2_NODE_NAMES[node])
             print(l2_nodes[node].stats)
-            print("Precision %6f" % (l2_nodes[node].stats.tp / (l2_nodes[node].stats.tp + l2_nodes[node].stats.fp[1])))
-            print("Recall %6f" % (l2_nodes[node].stats.tp / (l2_nodes[node].stats.tp + l2_nodes[node].stats.fp[0])))
-
-    print("\n\033[1;35m    RESULTS\033[m [%s]\n           \033[1;32mBENIGN\033[m | \033[1;31mMALIGN\033[m" % os.path.basename(args.files[0]))
-    print(total_correct, total)
-    print("    TP: %9f%%   FP: %9f%%" % (total_correct*100./total , total_fp*100./total))
+    # print("    TP: %9f%%   FP: %9f%%" % (total_correct*100./total , total_fp*100./total))
 else:
     communications = dict()
     for i,flow_id in enumerate(all_flow_ids):
@@ -200,7 +195,6 @@ else:
         benign_count = communications[comm].count((0,0)) + communications[comm].count((1,0)) + communications[comm].count((2,0))
         benign_ratio = benign_count*1.0/(benign_count+malign_count)
         if args.verbose:
-            print(comm + ":")
             print("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nBenign ratio: %f" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, benign_ratio))
         if benign_ratio<=0.2 and (benign_count+malign_count)>=ALERT_LOWER_BOUND_FLOWS:
