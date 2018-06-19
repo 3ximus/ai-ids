@@ -3,12 +3,8 @@
 # creator: joao meira (joao.meira@tekever.com)
 from __future__ import print_function
 import dpkt
-import datetime
-import socket
-import argparse
 import numpy as np
-import os
-import time
+import os, sys, time, datetime, socket, argparse
 
 from dpkt.compat import compat_ord
 from collections import OrderedDict
