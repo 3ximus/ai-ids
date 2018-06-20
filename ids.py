@@ -55,7 +55,7 @@ L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 CHUNK_SIZE = conf.getint('ids', 'chunk-size')
 MAX_THREADS = conf.getint('ids', 'max-threads')
 
-ALERT_LOWER_BOUND_FLOWS = 150
+ALERT_LOWER_BOUND_FLOWS = 50
 # verifiy configuration integrity
 l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
 if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
@@ -143,6 +143,7 @@ thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
 
 try:
     if args.verbose: print("Reading Test Dataset in chunks...")
+    print(CHUNK_SIZE)
     for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE): # launch threads
         thread = threading.Thread(target=predict_chunk,args=(test_data,))
         thread.start()
@@ -198,6 +199,6 @@ else:
             print("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nBenign ratio: %f" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, benign_ratio))
         if benign_ratio<=0.2 and (benign_count+malign_count)>=ALERT_LOWER_BOUND_FLOWS:
-            of.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%" %
+            of.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
     of.close()

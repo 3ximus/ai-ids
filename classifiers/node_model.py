@@ -97,8 +97,6 @@ class NodeModel:
             for line in fd:
                 tmp = line.strip('\n').split(',')
                 #x_in.append(tmp[1:-1])
-                # index_subset: all but time-related features
-                #index_subset=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67]
                 x_in.append([tmp[i] for i in index_subset])
                 y_in.append(tmp[-1]) # choose result based on label
                 flow_ids.append(tmp[0])
@@ -117,7 +115,7 @@ class NodeModel:
             for i, line in enumerate(fd):
                 tmp = line.strip('\n').split(',')
                 #x_in.append(tmp[1:-1])
-                x_in.append([tmp[i] for i in index_subset])
+                x_in.append([tmp[j] for j in index_subset])
                 y_in.append(tmp[-1]) # choose result based on label
                 flow_ids.append(tmp[0])
                 if (i+1) % n_chunks == 0:
@@ -271,17 +269,18 @@ class Stats:
                     tn, fp, fn, tp = np.ravel(self.confusion_matrix)
                 else:
                     tp, fn, fp, tn = np.ravel(self.confusion_matrix)
-                rep_str += "Overall Acc = %4f\n" % ((tp+tn)/self.n)
+
+                rep_str += "Overall Acc = %4f\n" % (float(tp+tn)/self.n)
                 if self.node.verbose:
                     if tp+fn:
-                        rep_str += "Recall = %4f\n" % (tp/(tp+fn))
-                        rep_str += "Miss Rate = %4f\n" % (fn/(tp+fn))
+                        rep_str += "Recall = %4f\n" % (float(tp)/(tp+fn))
+                        rep_str += "Miss Rate = %4f\n" % (float(fn)/(tp+fn))
                     if tn+fp:
-                        rep_str += "Specificity = %4f\n" % (tn/(tn+fp))
-                        rep_str += "Fallout = %4f\n" % (fp/(tn+fp))
-                    if tp+fp: rep_str += "Precision = %4f\n" % (tp/(tp+fp))
-                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % (2*tp/(2*tp+fp+fn))
-                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (((tp*tn)-(fp*fn))/np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
+                        rep_str += "Specificity = %4f\n" % (float(tn)/(tn+fp))
+                        rep_str += "Fallout = %4f\n" % (float(fp)/(tn+fp))
+                    if tp+fp: rep_str += "Precision = %4f\n" % (float(tp)/(tp+fp))
+                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % (float(2*tp)/(2*tp+fp+fn))
+                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (float((tp*tn)-(fp*fn))/np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
 
             # unidentified
             diag = sum(np.diag(self.confusion_matrix))
