@@ -270,17 +270,17 @@ class Stats:
                 else:
                     tp, fn, fp, tn = np.ravel(self.confusion_matrix)
 
-                rep_str += "Overall Acc = %4f\n" % (float(tp+tn)/self.n)
+                rep_str += "Overall Acc = \033[34m%4f\033[m\n" % float(tp+tn)/self.n
                 if self.node.verbose:
                     if tp+fn:
-                        rep_str += "Recall = %4f\n" % (float(tp)/(tp+fn))
-                        rep_str += "Miss Rate = %4f\n" % (float(fn)/(tp+fn))
+                        rep_str += "Recall = %4f\n" % float(tp)/(tp+fn)
+                        rep_str += "Miss Rate = %4f\n" % float(fn)/(tp+fn)
                     if tn+fp:
-                        rep_str += "Specificity = %4f\n" % (float(tn)/(tn+fp))
-                        rep_str += "Fallout = %4f\n" % (float(fp)/(tn+fp))
-                    if tp+fp: rep_str += "Precision = %4f\n" % (float(tp)/(tp+fp))
-                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % (float(2*tp)/(2*tp+fp+fn))
-                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (float((tp*tn)-(fp*fn))/np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
+                        rep_str += "Specificity = %4f\n" % float(tn)/(tn+fp)
+                        rep_str += "Fallout = %4f\n" % float(fp)/(tn+fp)
+                    if tp+fp: rep_str += "Precision = %4f\n" % float(tp)/(tp+fp)
+                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % float(2*tp)/(2*tp+fp+fn)
+                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % float((tp*tn)-(fp*fn))/np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
 
             # unidentified
             diag = sum(np.diag(self.confusion_matrix))
@@ -302,10 +302,6 @@ class Stats:
                 for j in range(len(self.node.attack_keys)):
                     curses_screen.addstr(("%" + str(lmsize) + "d ") % self.confusion_matrix[i,j])
                 curses_screen.addstr('\n')
-
-            if len(self.node.attack_keys) == 2: # MALIGN OR BENIGN
-                positive = np.argmax(self.node.outputs['MALIGN']) # get index of MALIGN which will be considered positive
-                curses_screen.addstr("TPR = %4f%%  FPR = %4f%%\n" % (self.tp*100./self.n, self.fp[positive]*100./self.n), curses.color_pair(5) | curses.A_BOLD)
 
             for err_msg in self.node.message_buffer:
                 curses_screen.addstr('[')

@@ -175,10 +175,8 @@ if not args.show_comms:
         if l2_nodes[node].stats.n > 0:
             total += l2_nodes[node].stats.n
             total_correct += l2_nodes[node].stats.total_correct
-            # total_fp += l2_nodes[node].stats.fp[np.argmax(l2_nodes[node].outputs['MALIGN'])]
             print(L2_NODE_NAMES[node])
             print(l2_nodes[node].stats)
-    # print("    TP: %9f%%   FP: %9f%%" % (total_correct*100./total , total_fp*100./total))
 else:
     communications = dict()
     for i,flow_id in enumerate(all_flow_ids):
