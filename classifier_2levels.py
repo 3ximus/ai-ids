@@ -1,25 +1,21 @@
 #!/usr/bin/env python
+
+"""This file contains the double layered classifier
+
+
+AUTHORS:
+
+Joao Meira <joao.meira@tekever.com>
+Fabio Almeida <fabio.4335@gmail.com>
+"""
+
 from __future__ import print_function
 import os, argparse, re, curses
 import numpy as np
-from models.node import NodeModel
+from lib.node import NodeModel
 import threading
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
-
-# can be useful later
-class ThreadWithReturnValue(threading.Thread):
-    def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs={}, Verbose=None):
-        threading.Thread.__init__(self, group, target, name, args, kwargs, Verbose)
-        self._return = None
-    def run(self):
-        if self._Thread__target is not None:
-            self._return = self._Thread__target(*self._Thread__args,
-                                                **self._Thread__kwargs)
-    def join(self):
-        threading.Thread.join(self)
-        return self._return
 
 # =====================
 #     CLI OPTIONS
@@ -31,7 +27,7 @@ op.add_argument('-s', '--select', nargs='+', help='select on layer/node to test 
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
 op.add_argument('-z', '--show-comms-only', action='store_true', help="show communication information only", dest='show_comms')
 op.add_argument('-v', '--verbose', action='store_true', help="verbose output. Disables curses interface", dest='verbose')
-op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='models/options.cfg')
+op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='lib/configs/ids.cfg')
 op.add_argument('-a', '--alert-file', help="alert file", dest='alert_file', default='alerts.txt')
 args = op.parse_args()
 
@@ -54,8 +50,8 @@ L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 
 CHUNK_SIZE = conf.getint('ids', 'chunk-size')
 MAX_THREADS = conf.getint('ids', 'max-threads')
+ALERT_LOWER_BOUND_FLOWS = conf.getint('ids', 'lower-bound-flows')
 
-ALERT_LOWER_BOUND_FLOWS = 50
 # verifiy configuration integrity
 l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
 if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):

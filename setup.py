@@ -14,7 +14,7 @@ buildOptions = dict(
 			'pytz', 'scipy', 'six',
 			'traitlets', 'urllib3',
 			# local modules
-			'classifiers.node_model'],
+			'lib.node'],
 		excludes = [],
 		optimize = 2,
 		include_files = [('classifiers/options.cfg', 'classifiers/options.cfg'), 'saved_neural_networks/'],
