@@ -270,17 +270,17 @@ class Stats:
                 else:
                     tp, fn, fp, tn = np.ravel(self.confusion_matrix)
 
-                rep_str += "Overall Acc = \033[34m%4f\033[m\n" % float(tp+tn)/self.n
+                rep_str += "Overall Acc = \033[34m%4f\033[m\n" % (float(tp+tn)/float(self.n))
                 if self.node.verbose:
                     if tp+fn:
-                        rep_str += "Recall = %4f\n" % float(tp)/(tp+fn)
-                        rep_str += "Miss Rate = %4f\n" % float(fn)/(tp+fn)
+                        rep_str += "Recall = %4f\n" % (float(tp)/float(tp+fn))
+                        rep_str += "Miss Rate = %4f\n" % (float(fn)/(tp+fn))
                     if tn+fp:
-                        rep_str += "Specificity = %4f\n" % float(tn)/(tn+fp)
-                        rep_str += "Fallout = %4f\n" % float(fp)/(tn+fp)
-                    if tp+fp: rep_str += "Precision = %4f\n" % float(tp)/(tp+fp)
-                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % float(2*tp)/(2*tp+fp+fn)
-                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % float((tp*tn)-(fp*fn))/np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+                        rep_str += "Specificity = %4f\n" % (float(tn)/float(tn+fp))
+                        rep_str += "Fallout = %4f\n" % (float(fp)/float(tn+fp))
+                    if tp+fp: rep_str += "Precision = %4f\n" % (float(tp)/float(tp+fp))
+                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % (float(2*tp)/float(2*tp+fp+fn))
+                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (float((tp*tn)-(fp*fn))/float(np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))))
 
             # unidentified
             diag = sum(np.diag(self.confusion_matrix))

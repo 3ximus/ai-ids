@@ -2,7 +2,7 @@
 from __future__ import print_function
 import os, argparse, re, curses
 import numpy as np
-from classifiers.node_model import NodeModel
+from models.node import NodeModel
 import threading
 try: import configparser
 except ImportError: import ConfigParser as configparser # for python2
@@ -31,7 +31,7 @@ op.add_argument('-s', '--select', nargs='+', help='select on layer/node to test 
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
 op.add_argument('-z', '--show-comms-only', action='store_true', help="show communication information only", dest='show_comms')
 op.add_argument('-v', '--verbose', action='store_true', help="verbose output. Disables curses interface", dest='verbose')
-op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='classifiers/options.cfg')
+op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='models/options.cfg')
 op.add_argument('-a', '--alert-file', help="alert file", dest='alert_file', default='alerts.txt')
 args = op.parse_args()
 
@@ -143,7 +143,6 @@ thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
 
 try:
     if args.verbose: print("Reading Test Dataset in chunks...")
-    print(CHUNK_SIZE)
     for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE): # launch threads
         thread = threading.Thread(target=predict_chunk,args=(test_data,))
         thread.start()
