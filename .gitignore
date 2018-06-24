@@ -14,9 +14,10 @@ new
 csv/*
 pcap/*
 dist/*
-saved_neural_networks/*
-results/*
 new/*
+
+saved_neural_networks/*
+log/*
 
 # virtual environment
 IDS/*

@@ -10,7 +10,7 @@ Fabio Almeida <fabio.4335@gmail.com>
 """
 
 from __future__ import print_function
-import os, argparse, re, curses
+import os, argparse, re
 import numpy as np
 from lib.node import NodeModel
 import threading
@@ -26,7 +26,7 @@ op.add_argument('files', metavar='file', nargs='+', help='csv file with all feat
 op.add_argument('-s', '--select', nargs='+', help='select on layer/node to test from config file')
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
 op.add_argument('-z', '--show-comms-only', action='store_true', help="show communication information only", dest='show_comms')
-op.add_argument('-v', '--verbose', action='store_true', help="verbose output. Disables curses interface", dest='verbose')
+op.add_argument('-v', '--verbose', action='store_true', help="Verbose output.", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='lib/configs/ids.cfg')
 op.add_argument('-a', '--alert-file', help="alert file", dest='alert_file', default='alerts.txt')
 args = op.parse_args()
@@ -78,26 +78,11 @@ for node in range(len(l2_nodes)):
 #   THREAD TEST CHUNK
 # =====================
 
-def print_curses_stats(): # meant to be used inside each thread to update its results
-    with curses_lock:
-        stdscr.addstr(os.path.basename(args.files[0]) + "\n")
-        stdscr.addstr("    LAYER 1\n", curses.color_pair(7) | curses.A_BOLD)
-        l1.stats.update_curses_screen(stdscr, curses)
-        if any([node.stats.n for node in l2_nodes]):
-            stdscr.addstr("    LAYER 2\n", curses.color_pair(7) | curses.A_BOLD)
-        for node in range(len(l2_nodes)):
-            if l2_nodes[node].stats.n > 0:
-                stdscr.addstr(L2_NODE_NAMES[node]+'\n')
-                l2_nodes[node].stats.update_curses_screen(stdscr, curses)
-        stdscr.refresh()
-        stdscr.clear()
-
 def predict_chunk(test_data):
     thread_semaphore.acquire()
     # LAYER 1
     y_predicted, _ = l1.predict(test_data)
 
-    if not args.verbose: print_curses_stats()
     # OUTPUT DATA PARTITION TO FEED LAYER 2
     labels_index = np.argmax(y_predicted, axis=1) if not l1.use_regressor else y_predicted
     all_l1_predicted.extend(labels_index)
@@ -106,7 +91,6 @@ def predict_chunk(test_data):
                                np.take(test_data[2], np.where(labels_index == x)[0], axis=0), # labels
                                np.take(test_data[3], np.where(labels_index == x)[0], axis=0)] # flow_ids
     l2_inputs = [filter_labels(x) for x in range(len(L2_NODE_NAMES))]
-    if not args.verbose and not args.show_comms: print_curses_stats()
 
     # LAYER 2
     for node in range(len(l2_nodes)):
@@ -114,7 +98,6 @@ def predict_chunk(test_data):
             y_predicted, flow_ids = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1],l2_inputs[node][2]))
             all_flow_ids.extend(flow_ids)
             all_l2_predicted.extend(np.argmax(y_predicted, axis=1))
-        if not args.verbose and not args.show_comms: print_curses_stats()
     thread_semaphore.release()
 
 
@@ -122,34 +105,15 @@ def predict_chunk(test_data):
 #  LAUNCH TEST THREADS
 # =====================
 
-if not args.verbose and not args.show_comms:
-    stdscr = curses.initscr()
-    curses.noecho()
-    curses.cbreak()
-
-# Start colors in curses
-    curses.start_color()
-    curses.use_default_colors()
-    for i in range(0, curses.COLORS):
-        curses.init_pair(i + 1, i, -1)
-    curses_lock = threading.Lock()
-
-
 thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
 
-try:
-    if args.verbose: print("Reading Test Dataset in chunks...")
-    for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE): # launch threads
-        thread = threading.Thread(target=predict_chunk,args=(test_data,))
-        thread.start()
-    for t in threading.enumerate(): # wait for the remaining threads
-        if t.getName()!="MainThread":
-            t.join()
-finally:
-    if not args.verbose and not args.show_comms:
-        curses.echo()
-        curses.nocbreak()
-        curses.endwin()
+if args.verbose: print("Reading Test Dataset in chunks...")
+for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE): # launch threads
+    thread = threading.Thread(target=predict_chunk,args=(test_data,))
+    thread.start()
+for t in threading.enumerate(): # wait for the remaining threads
+    if t.getName()!="MainThread":
+        t.join()
 
 # =====================
 #   PRINT FINAL STATS

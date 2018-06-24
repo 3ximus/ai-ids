@@ -1,6 +1,14 @@
+"""This file contains the class NodeModel
+
+AUTHORS:
+
+Joao Meira <joao.meira@tekever.com>
+Fabio Almeida <fabio.4335@gmail.com>
+"""
+
 from __future__ import print_function
-import os, pickle, hashlib, threading
-from sklearn.metrics import accuracy_score, confusion_matrix
+import os, pickle, hashlib
+from lib.log import Stats, Logger
 import numpy as np
 
 class NodeModel:
@@ -40,6 +48,7 @@ class NodeModel:
         self.saved_model_file = None
         self.saved_scaler_file = None
         self.stats = Stats(self)
+        self.logger = Logger()
 
 
     @staticmethod
@@ -62,12 +71,6 @@ class NodeModel:
         loaded_model = pickle.load(model_file)
         model_file.close()
         return loaded_model
-
-    def log(self, m_type, message, force_log=False):
-        if self.verbose or force_log:
-            print('%s %13s [%s]: %s' % (m_type, self.node_name, threading.current_thread().getName(), message))
-        if m_type == MessageType.error:
-            self.message_buffer.append('%13s [%s]: %s' % (self.node_name, threading.current_thread().getName(), message))
 
     @staticmethod
     def gen_saved_model_pathname(base_path, train_filename, classifier_settings):
@@ -133,7 +136,7 @@ class NodeModel:
             elif label in self.label_map:
                 y.append(self.outputs[self.label_map[label]]) # if an error ocurrs here your label conversion is wrong
             else:
-                self.log(MessageType.error, "Unknown label %s. Add it to correct mapping section in config file" % label)
+                self.logger.log(self.logger.error, "%s : Unknown label %s. Add it to correct mapping section in config file" % (self.node_name, label), self.verbose)
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
@@ -157,7 +160,7 @@ class NodeModel:
 
         if os.path.isfile(self.saved_model_file) and not disable_load and not self.force_train:
             # LOAD MODEL
-            self.log(MessageType.log, "Loading model: %s" % os.path.basename(self.saved_model_file))
+            self.logger.log(self.logger.normal, "%s : Loading model: %s" % (self.node_name, self.saved_model_file), self.verbose)
             self.model = self.load_model(self.saved_model_file)
         else:
             # CREATE NEW MODEL
@@ -177,18 +180,18 @@ class NodeModel:
             self.model = eval(self.classifier)
 
             # train and save the model
-            self.log(MessageType.log,"Training %s" % self.node_name, force_log=True)
+            self.logger.log(self.logger.normal, "%s : Training" %  self.node_name, True)
             try:
                 if self.unsupervised:
                     self.model.fit(X_train)
                 else:
                     self.model.fit(X_train, y_train)
             except ValueError as err:
-                self.log(MessageType.error, "Problem found when training model, this classifier might be a regressor:\n%s\nIf it is, use 'regressor' option in configuration file" % self.model)
-                self.log(MessageType.error, err)
+                self.logger.log(self.logger.error, "%s : Problem found when training model, this classifier might be a regressor:\n%s\nIf it is, use 'regressor' option in configuration file" % (self.node_name, self.model))
+                self.logger.log(self.logger.error, "%s : %s" % (self.node_name, err), True)
                 exit()
             except TypeError:
-                self.log(MessageType.error, "Problem found when training model, this classifier might not be unsupervised:\n%s" % self.model)
+                self.logger.log(self.logger.error, "%s : Problem found when training model, this classifier might not be unsupervised:\n%s" % (self.node_name, self.model))
                 exit()
             self.save_model(self.saved_model_file, self.model)
         return self.model
@@ -197,7 +200,7 @@ class NodeModel:
         '''Apply a created model to given test_data (tuple with data input and data labels) and return predicted classification'''
 
         if not self.model:
-            self.log(MessageType.error, "ERROR: A model hasn't been trained or loaded yet for %s. Run NodeModel.train" % self.node_name)
+            self.logger.log(self.logger.error, "%s : The model hasn't been trained or loaded yet. Run NodeModel.train" % self.node_name)
             exit()
         X_test, y_test, _, flow_ids = test_data
         # apply network to the test data
@@ -205,15 +208,15 @@ class NodeModel:
             scaler = self.load_model(self.saved_scaler_file)
             try:
                 X_test = scaler.transform(X_test) # normalize
-            except ValueError as e:
-                self.log(MessageType.error, 'Transforming with scaler\n'+ str(e))
+            except ValueError as err:
+                self.logger.log(self.logger.error, "%s : Transforming with scaler. %s" % (self.node_name, err))
                 exit()
 
-        self.log(MessageType.log, "Predicting on #%d samples" % len(X_test))
+        self.logger.log(self.logger.normal, "%s : Predicting on #%d samples" % (self.node_name, len(X_test)), self.verbose)
         try:
             y_predicted = self.model.predict(X_test)
-        except ValueError as e:
-            self.log(MessageType.error, 'Predicting\n'+ str(e))
+        except ValueError as err:
+            self.logger.log(self.logger.error, "%s : Predicting. %s" % (self.node_name, err))
             exit()
 
         if not self.use_regressor and not self.unsupervised:
@@ -225,91 +228,4 @@ class NodeModel:
         self.stats.update(y_predicted, y_test)
         return y_predicted,flow_ids
 
-
-class Stats:
-    '''Holds stats from predictions. Can be updated multiple times to include more stats on tests with same labels'''
-
-    def __init__(self, node):
-        self.node = node
-        self.n = self.total_correct = 0
-        self.confusion_matrix = np.matrix([[0 for x in range(len(node.outputs))] for x in range(len(node.outputs))])
-        self.lock = threading.Lock()
-
-    def update(self, y_predicted, y_test):
-        '''Update stats values with more results. Thread safe.
-
-            Parameters
-            ----------
-            - y_predicted     numpy list of predict NN outputs
-            - y_test          numpy list of target outputs
-        '''
-
-        with self.lock:
-            self.total_correct += accuracy_score(y_test, y_predicted, normalize=False) # counts only elements not classified as [0,0..,0]
-            # TODO FIXME Using np.argmax puts unclassified entries ([0,0,...,0]) as label zero, see previous code to count those
-            x = np.argmax(y_test, axis=1) if len(y_test.shape) == 2 else y_test
-            y = np.argmax(y_predicted, axis=1) if len(y_predicted.shape) == 2 else y_predicted
-            self.confusion_matrix += np.matrix(confusion_matrix(x, y, labels=list(range(len(self.node.attack_keys)))))
-            self.n = self.confusion_matrix.sum()
-
-    def __repr__(self):
-        with self.lock:
-            # confusion matrix
-            lmsize = max(map(len, self.node.attack_keys[:-1])) # for output formatting
-            rep_str = " Real\\Pred |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n"
-            for i, label in enumerate(self.node.attack_keys):
-                rep_str += "%10s |" % label
-                for j in range(len(self.node.attack_keys)):
-                    rep_str += (("\033[1;32m" if i == j else '') + "%" + str(lmsize) + "d\033[m ") % self.confusion_matrix[i,j]
-                rep_str += "\n"
-
-            # stats
-            if len(self.node.attack_keys) == 2: # MALIGN OR BENIGN
-                if np.argmax(self.node.outputs['MALIGN']) == 1:
-                    tn, fp, fn, tp = np.ravel(self.confusion_matrix)
-                else:
-                    tp, fn, fp, tn = np.ravel(self.confusion_matrix)
-
-                rep_str += "Overall Acc = \033[34m%4f\033[m\n" % (float(tp+tn)/float(self.n))
-                if self.node.verbose:
-                    if tp+fn:
-                        rep_str += "Recall = %4f\n" % (float(tp)/float(tp+fn))
-                        rep_str += "Miss Rate = %4f\n" % (float(fn)/(tp+fn))
-                    if tn+fp:
-                        rep_str += "Specificity = %4f\n" % (float(tn)/float(tn+fp))
-                        rep_str += "Fallout = %4f\n" % (float(fp)/float(tn+fp))
-                    if tp+fp: rep_str += "Precision = %4f\n" % (float(tp)/float(tp+fp))
-                    if tp+fp+fn: rep_str += "F1 score = %4f\n" % (float(2*tp)/float(2*tp+fp+fn))
-                    if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (float((tp*tn)-(fp*fn))/float(np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))))
-
-            # unidentified
-            diag = sum(np.diag(self.confusion_matrix))
-            if diag - self.total_correct:
-                rep_str += "Unidentified flows marked as \"%s\": \033[1;33m#%d\033[m\n" % \
-                    (self.node.attack_keys[0], diag - self.total_correct)
-
-            # append error messages
-            for err_msg in self.node.message_buffer:
-                rep_str += '[\033[1;31mERROR\033[m]%s\n'%err_msg
-        return rep_str
-
-    def update_curses_screen(self, curses_screen, curses):
-        with self.lock:
-            lmsize = max(map(len, self.node.attack_keys[:-1])) # for output formatting
-            curses_screen.addstr(" Real\\Pred |" + ''.join([('%' + str(lmsize) + 's ') % label for label in self.node.attack_keys]) + "\n")
-            for i, label in enumerate(self.node.attack_keys):
-                curses_screen.addstr("%10s |" % label)
-                for j in range(len(self.node.attack_keys)):
-                    curses_screen.addstr(("%" + str(lmsize) + "d ") % self.confusion_matrix[i,j])
-                curses_screen.addstr('\n')
-
-            for err_msg in self.node.message_buffer:
-                curses_screen.addstr('[')
-                curses_screen.addstr('ERROR', curses.color_pair(2) | curses.A_BOLD)
-                curses_screen.addstr(']%s\n' + err_msg)
-
-class MessageType:
-    error = '[\033[1;31mERROR\033[m]'
-    warning = '[\033[1;33mWARNING\033[m]'
-    log = '[\033[1;34m LOG \033[m]'
 
