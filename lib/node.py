@@ -87,43 +87,40 @@ class NodeModel:
         return base_path + '/%s-%s' % (train_filename[:-4].replace('/','-'), used_model_md5.hexdigest()[:7])
 
     # normal csvs
-    def parse_csvdataset(self, filename):
+    def parse_csvdataset(self, fd):
         '''Parse entire dataset and return processed np.array with x and y'''
         flow_ids, x_in, y_in = [], [], []
-        with open(filename, 'r') as fd:
-            feature_string = fd.readline()
-            feature_string = feature_string.split(',')
-            index_subset=[]
-            for elem in feature_string:
-                if elem.find('iat')==-1 and elem.find('sec')==-1 and elem.find('duration')==-1 and elem!='label\n' and elem!='flow_id':
-                    index_subset.append(feature_string.index(elem))
-            for line in fd:
-                tmp = line.strip('\n').split(',')
-                #x_in.append(tmp[1:-1])
-                x_in.append([tmp[i] for i in index_subset])
-                y_in.append(tmp[-1]) # choose result based on label
-                flow_ids.append(tmp[0])
+        feature_string = fd.readline().split(',')
+        index_subset=[]
+        for elem in feature_string:
+            if 'iat' not in elem and 'sec' not in elem and 'duration' not in elem and elem != 'label\n' and elem !='flow_id':
+                index_subset.append(feature_string.index(elem))
+        for line in fd:
+            tmp = line.strip('\n').split(',')
+            #x_in.append(tmp[1:-1])
+            x_in.append([tmp[i] for i in index_subset])
+            y_in.append(tmp[-1]) # choose result based on label
+            flow_ids.append(tmp[0])
         return self.process_data(x_in, y_in, flow_ids)
 
-    def yield_csvdataset(self, filename, n_chunks):
-        '''Iterate over dataset, yielding np.array with x and y in chunks of size n_chunks'''
+    def yield_csvdataset(self, fd, n_chunks):
+        '''Iterate over data, yielding np.array with x and y in chunks of size n_chunks'''
         flow_ids, x_in, y_in = [], [], []
-        with open(filename, 'r') as fd:
-            feature_string = fd.readline()
-            feature_string = feature_string.split(',')
-            index_subset=[]
-            for elem in feature_string:
-                if elem.find('iat')==-1 and elem.find('sec')==-1 and elem.find('duration')==-1 and elem!='label\n' and elem!='flow_id':
-                    index_subset.append(feature_string.index(elem))
-            for i, line in enumerate(fd):
-                tmp = line.strip('\n').split(',')
-                #x_in.append(tmp[1:-1])
-                x_in.append([tmp[j] for j in index_subset])
-                y_in.append(tmp[-1]) # choose result based on label
-                flow_ids.append(tmp[0])
-                if (i+1) % n_chunks == 0:
-                    yield self.process_data(x_in, y_in, flow_ids)
-                    x_in, y_in = [], []
+        feature_string = fd.readline()
+        feature_string = feature_string.split(',')
+        index_subset=[]
+        for elem in feature_string:
+            if 'iat' not in elem and 'sec' not in elem and 'duration' not in elem and elem != 'label\n' and elem !='flow_id':
+                index_subset.append(feature_string.index(elem))
+        for i, line in enumerate(fd):
+            tmp = line.strip('\n').split(',')
+            #x_in.append(tmp[1:-1])
+            x_in.append([tmp[j] for j in index_subset])
+            y_in.append(tmp[-1]) # choose result based on label
+            flow_ids.append(tmp[0])
+            if (i+1) % n_chunks == 0:
+                yield self.process_data(x_in, y_in, flow_ids)
+                x_in, y_in = [], []
         yield self.process_data(x_in, y_in, flow_ids)
 
     def process_data(self, x, labels, flow_ids):
@@ -165,7 +162,8 @@ class NodeModel:
         else:
             # CREATE NEW MODEL
 
-            X_train, y_train, _, _ = self.parse_csvdataset(train_filename)
+            with open(train_filename, 'r') as fd:
+                X_train, y_train, _, _ = self.parse_csvdataset(fd)
             # scaler setup
             if self.scaler_module:
                 exec('import '+ self.scaler_module) # import scaler module

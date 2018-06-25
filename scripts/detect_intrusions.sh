@@ -16,11 +16,11 @@ pcap_file="${pcap_dir}/${counter}-${now_date}.pcap"
 csv_file="${csv_dir}/${counter}-${now_date}.csv"
 alert_file="${alert_dir}/${counter}-${now_date}.txt"
 
-python tk_flowmeter.py "$pcap_file" --verbose --out-dir "${csv_dir}/"		# default label: unknown
+python flows.py "$pcap_file" --verbose --out-dir "${csv_dir}/"		# default label: unknown
 if [ -e "$csv_file" ]
 then
 	echo "Testing capture file ${counter} for intrusions..."
-	python ids.py "$csv_file" --show-comms-only --alert-file "$alert_file"
+	python classifier_2levels.py "$csv_file" --show-comms-only --alert-file "$alert_file"
 	if [ -s "$alert_file" ] 									# check if alert file has content
 	then
 		echo "Alert saved in: $alert_file"
