@@ -23,7 +23,6 @@ except ImportError: import ConfigParser as configparser # for python2
 
 op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
 op.add_argument('-i', '--input', metavar='FILE', dest='input', help='csv file with all features to test. If none is given stdin is read')
-op.add_argument('-s', '--select', nargs='+', help='select on layer/node to test from config file')
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
 op.add_argument('-z', '--show-comms-only', action='store_true', help="show communication information only", dest='show_comms')
 op.add_argument('-v', '--verbose', action='store_true', help="Verbose output.", dest='verbose')
@@ -161,3 +160,4 @@ else:
 			of.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
 					(comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
 	of.close()
+
