@@ -120,7 +120,7 @@ class NodeModel:
                 flow_ids.append(tmp[0])
                 if (i+1) % n_chunks == 0:
                     yield self.process_data(x_in, y_in, flow_ids)
-                    x_in, y_in = [], []
+                    x_in, y_in, flow_ids = [], [], []
         yield self.process_data(x_in, y_in, flow_ids)
 
     def process_data(self, x, labels, flow_ids):

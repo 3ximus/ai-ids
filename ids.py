@@ -38,10 +38,7 @@ args = op.parse_args()
 # =====================
 #    CONFIGURATION
 # =====================
-all_flow_ids=[]
-all_l1_predicted = []
-all_l2_predicted=[]
-
+flows = dict()
 # load config file settings
 conf = configparser.ConfigParser(allow_no_value=True)
 conf.optionxform=str
@@ -55,7 +52,8 @@ L2_TRAIN_FILES = [conf.get('ids', node_name) for node_name in L2_NODE_NAMES]
 CHUNK_SIZE = conf.getint('ids', 'chunk-size')
 MAX_THREADS = conf.getint('ids', 'max-threads')
 
-ALERT_LOWER_BOUND_FLOWS = 50
+ALERT_LOWER_BOUND_FLOWS = 150           # "heuristically" chosen value (must come from a probabilistic study on the upper bound of no. of flows usually present in benign communications. 
+                                        # It should take into consideration the capture time (current "classification window size") and the most probable number of benign flows per communication (2nd module - a view on bulks of flows)
 # verifiy configuration integrity
 l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
 if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
@@ -99,12 +97,13 @@ def print_curses_stats(): # meant to be used inside each thread to update its re
 def predict_chunk(test_data):
     thread_semaphore.acquire()
     # LAYER 1
-    y_predicted, _ = l1.predict(test_data)
-
-    if not args.verbose: print_curses_stats()
-    # OUTPUT DATA PARTITION TO FEED LAYER 2
+    y_predicted, flow_ids = l1.predict(test_data)
     labels_index = np.argmax(y_predicted, axis=1) if not l1.use_regressor else y_predicted
-    all_l1_predicted.extend(labels_index)
+    for i, fl_id in enumerate(flow_ids):
+        flows[fl_id] = [labels_index[i]]
+    
+    if not args.verbose and not args.show_comms: print_curses_stats()
+    # OUTPUT DATA PARTITION TO FEED LAYER 2
     # ignore test_data[1] since its only used for l1 crossvalidation
     filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                np.take(test_data[2], np.where(labels_index == x)[0], axis=0), # labels
@@ -116,8 +115,9 @@ def predict_chunk(test_data):
     for node in range(len(l2_nodes)):
         if len(l2_inputs[node][0]) != 0:
             y_predicted, flow_ids = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1],l2_inputs[node][2]))
-            all_flow_ids.extend(flow_ids)
-            all_l2_predicted.extend(np.argmax(y_predicted, axis=1))
+            labels_index = np.argmax(y_predicted, axis=1)
+            for i, fl_id in enumerate(flow_ids):
+                flows[fl_id].append(labels_index[i])                    # the order wasn't being kept because we are not classifying flows sequentially. Now this fixes it...
         if not args.verbose and not args.show_comms: print_curses_stats()
     thread_semaphore.release()
 
@@ -143,7 +143,6 @@ thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
 
 try:
     if args.verbose: print("Reading Test Dataset in chunks...")
-    print(CHUNK_SIZE)
     for test_data in l1.yield_csvdataset(args.files[0], CHUNK_SIZE): # launch threads
         thread = threading.Thread(target=predict_chunk,args=(test_data,))
         thread.start()
@@ -179,19 +178,19 @@ if not args.show_comms:
             print(l2_nodes[node].stats)
 else:
     communications = dict()
-    for i,flow_id in enumerate(all_flow_ids):
+    for flow_id in flows:
         communication_id = flow_id_to_communication_id(flow_id)
         if communication_id in communications.keys():
-            communications[communication_id].append((all_l1_predicted[i],all_l2_predicted[i]))
+            communications[communication_id].append(flows[flow_id])
         else:
-            communications[communication_id] = [(all_l1_predicted[i],all_l2_predicted[i])]
-    of = open(args.alert_file,"a")
+            communications[communication_id] = [flows[flow_id]]
+    of = open(args.alert_file,"w")
     for comm in communications:
-        fastdos_count = communications[comm].count((0,1))
-        portscan_count = communications[comm].count((1,1))
-        bruteforce_count = communications[comm].count((2,1))
+        fastdos_count = communications[comm].count([0,1])
+        portscan_count = communications[comm].count([1,1])
+        bruteforce_count = communications[comm].count([2,1])
         malign_count = fastdos_count + portscan_count + bruteforce_count
-        benign_count = communications[comm].count((0,0)) + communications[comm].count((1,0)) + communications[comm].count((2,0))
+        benign_count = communications[comm].count([0,0]) + communications[comm].count([1,0]) + communications[comm].count([2,0])
         benign_ratio = benign_count*1.0/(benign_count+malign_count)
         if args.verbose:
             print("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nBenign ratio: %f" %
