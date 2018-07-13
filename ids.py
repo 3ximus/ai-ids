@@ -192,6 +192,7 @@ else:
             communications[communication_id] = [flow_results[flow_id]]
     of1 = open(args.alert_file+"_level1.txt","w")
     of2 = open(args.alert_file+"_level2.txt","w")
+    of3 = open(args.alert_file+"_level3.txt","w")
     for comm in communications:
         fastdos_count = communications[comm].count([0,1])
         portscan_count = communications[comm].count([1,1])
@@ -202,16 +203,22 @@ else:
         if args.verbose:
             print("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nBenign ratio: %f" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, benign_ratio))
-            # alerts level 1 (very suspicious)
+        # alerts level 1 (very suspicious)
         if benign_ratio<=0.2 and (benign_count+malign_count)>=ALERT_LOWER_BOUND_FLOWS:
             of1.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
         # alerts level 2 (suspicious)
-        elif malign_count>=ALERT_LOWER_BOUND_FLOWS:
+        if malign_count>=ALERT_LOWER_BOUND_FLOWS:
             of2.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
+        # alerts level 3 (unusual communication rate), this alert level doesn't rely on the flow classifier to get everything right
+        if (malign_count+benign_count)>=ALERT_LOWER_BOUND_FLOWS:
+            of3.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
+                    (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
+
     of1.close()
     of2.close()
+    of3.close()
 
 #L3_TRAIN_FILE = conf.get('ids','l3')
 #l3 = NodeModel('l3', conf, verbose=args.verbose)
