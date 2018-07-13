@@ -208,13 +208,13 @@ else:
             of1.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
         # alerts level 2 (suspicious)
-        if malign_count>=ALERT_LOWER_BOUND_FLOWS:
+        elif malign_count>=ALERT_LOWER_BOUND_FLOWS:
             of2.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
         # alerts level 3 (unusual communication rate), this alert level doesn't rely on the flow classifier to get everything right
-        if (malign_count+benign_count)>=ALERT_LOWER_BOUND_FLOWS:
-            of3.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
-                    (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
+        elif (malign_count+benign_count)>=ALERT_LOWER_BOUND_FLOWS:
+            of3.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nCertainty: %f%%\n" %
+                    (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, (1-benign_ratio)*100))
 
     of1.close()
     of2.close()

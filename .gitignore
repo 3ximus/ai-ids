@@ -9,6 +9,7 @@ csv
 pcap
 dist
 new
+running_ids
 
 # data
 csv/*
@@ -17,6 +18,7 @@ dist/*
 saved_neural_networks/*
 results/*
 new/*
+running_ids/*
 
 # virtual environment
 IDS/*
