@@ -27,14 +27,13 @@ op.add_argument('-d', '--disable-load', action='store_true', help="disable loadi
 op.add_argument('-z', '--show-comms-only', action='store_true', help="show communication information only", dest='show_comms')
 op.add_argument('-v', '--verbose', action='store_true', help="Verbose output.", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='configs/ids.cfg')
-op.add_argument('-a', '--alert-file', help="alert file", dest='alert_file', default='alerts.txt')
+op.add_argument('-a', '--alert-file', help="alert file", dest='alert_file', default='alerts')
 args = op.parse_args()
 
 # =====================
 #    CONFIGURATION
 # =====================
-flows = dict()
-
+flow_results = dict()
 # load config file settings
 conf = configparser.ConfigParser(allow_no_value=True)
 conf.optionxform=str
@@ -83,7 +82,9 @@ def predict_chunk(test_data):
     # OUTPUT DATA PARTITION TO FEED LAYER 2
     labels_index = np.argmax(y_predicted, axis=1) if not l1.use_regressor else y_predicted
     for i, fl_id in enumerate(flow_ids):
-        flows[fl_id] = [labels_index[i]]
+        flow_results[fl_id] = [labels_index[i]]
+
+    # OUTPUT DATA PARTITION TO FEED LAYER 2
     # ignore test_data[1] since its only used for l1 crossvalidation
     filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                np.take(test_data[2], np.where(labels_index == x)[0], axis=0), # labels
@@ -93,10 +94,11 @@ def predict_chunk(test_data):
     # LAYER 2
     for node in range(len(l2_nodes)):
         if len(l2_inputs[node][0]) != 0:
-            y_predicted, flow_ids = l2_nodes[node].predict(l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1],l2_inputs[node][2]))
+            current_test_data = l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1],l2_inputs[node][2])
+            y_predicted, flow_ids = l2_nodes[node].predict(current_test_data)
             labels_index = np.argmax(y_predicted, axis=1)
             for i, fl_id in enumerate(flow_ids):
-                flows[fl_id].append(labels_index[i])                    # the order wasn't being kept because we are not classifying flows sequentially. Now this fixes it...
+                flow_results[fl_id].append(labels_index[i])           # the order wasn't being kept because we are not classifying flows sequentially. Now this fixes it...
     thread_semaphore.release()
 
 
@@ -139,13 +141,15 @@ if not args.show_comms:
             print(l2_nodes[node].stats)
 else:
     communications = dict()
-    for flow_id in flows:
+    for flow_id in flow_results:
         communication_id = flow_id_to_communication_id(flow_id)
         if communication_id in communications.keys():
-            communications[communication_id].append(flows[flow_id])
+            communications[communication_id].append(flow_results[flow_id])
         else:
-            communications[communication_id] = [flows[flow_id]]
-    of = open(args.alert_file,"w")
+            communications[communication_id] = [flow_results[flow_id]]
+    of1 = open(args.alert_file+"_level1.txt","w")
+    of2 = open(args.alert_file+"_level2.txt","w")
+    of3 = open(args.alert_file+"_level3.txt","w")
     for comm in communications:
         fastdos_count = communications[comm].count([0,1])
         portscan_count = communications[comm].count([1,1])
@@ -156,8 +160,20 @@ else:
         if args.verbose:
             print("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nBenign ratio: %f" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, benign_ratio))
+        # alerts level 1 (very suspicious)
         if benign_ratio<=0.2 and (benign_count+malign_count)>=ALERT_LOWER_BOUND_FLOWS:
-            of.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
+            of1.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
                     (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
-    of.close()
+        # alerts level 2 (suspicious)
+        elif malign_count>=ALERT_LOWER_BOUND_FLOWS:
+            of2.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
+                    (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
+        # alerts level 3 (unusual communication rate), this alert level doesn't rely on the flow classifier to get everything right
+        elif (malign_count+benign_count)>=ALERT_LOWER_BOUND_FLOWS:
+            of3.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nCertainty: %f%%\n" %
+                    (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, (1-benign_ratio)*100))
+
+    of1.close()
+    of2.close()
+    of3.close()
 

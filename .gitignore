@@ -9,12 +9,14 @@ csv
 pcap
 dist
 new
+running_ids
 
 # data
 csv/*
 pcap/*
 dist/*
 new/*
+running_ids/*
 
 saved_neural_networks/*
 log/*
