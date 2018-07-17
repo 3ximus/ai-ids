@@ -20,7 +20,7 @@ class Logger:
         self.log_file = open('log/classifier_2levels_run_%d.log' % time.time(),'a')
         self.lock = threading.Lock()
 
-    def log(self, color, message, verbose=False):
+    def log(self, message, color='', verbose=False):
         ''' Log messages to a the Logger file and to screen if verbose'''
         with self.lock:
             string = '%s %s %s' % (color, threading.current_thread().getName(), message)

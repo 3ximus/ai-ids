@@ -120,7 +120,7 @@ for t in threading.enumerate(): # wait for the remaining threads
 
 # =====================
 #   PRINT FINAL STATS
-# ====================j
+# =====================
 
 def flow_id_to_communication_id(flow_id):
     splitted_flow_id = flow_id.split('-')
@@ -130,6 +130,7 @@ if not args.show_comms:
     if args.input: print(os.path.basename(args.input))
     print("\033[1;36m    LAYER 1\033[m")
     print(l1.stats)
+    l1.logger.log(l1.stats)
 # output counter for l2
     print("\033[1;36m    LAYER 2\033[m")
     total = total_correct = total_fp = 0
@@ -139,6 +140,7 @@ if not args.show_comms:
             total_correct += l2_nodes[node].stats.total_correct
             print(L2_NODE_NAMES[node])
             print(l2_nodes[node].stats)
+            l2_nodes[node].logger.log(l2_nodes[node].stats)
 else:
     communications = dict()
     for flow_id in flow_results:

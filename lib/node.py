@@ -133,7 +133,7 @@ class NodeModel:
             elif label in self.label_map:
                 y.append(self.outputs[self.label_map[label]]) # if an error ocurrs here your label conversion is wrong
             else:
-                self.logger.log(self.logger.error, "%s : Unknown label %s. Add it to correct mapping section in config file" % (self.node_name, label), self.verbose)
+                self.logger.log("%s : Unknown label %s. Add it to correct mapping section in config file" % (self.node_name, label), self.logger.error, self.verbose)
                 exit()
         x = np.array(x, dtype='float64')
         y = np.array(y, dtype='int8')
@@ -157,7 +157,7 @@ class NodeModel:
 
         if os.path.isfile(self.saved_model_file) and not disable_load and not self.force_train:
             # LOAD MODEL
-            self.logger.log(self.logger.normal, "%s : Loading model: %s" % (self.node_name, self.saved_model_file), self.verbose)
+            self.logger.log("%s importing model from %s" % (self.node_name, self.saved_model_file),self.logger.normal, self.verbose)
             self.model = self.load_model(self.saved_model_file)
         else:
             # CREATE NEW MODEL
@@ -178,27 +178,28 @@ class NodeModel:
             self.model = eval(self.classifier)
 
             # train and save the model
-            self.logger.log(self.logger.normal, "%s : Training" %  self.node_name, True)
+            self.logger.log("%s : Training" %  self.node_name, self.logger.normal, True)
             try:
                 if self.unsupervised:
                     self.model.fit(X_train)
                 else:
                     self.model.fit(X_train, y_train)
             except ValueError as err:
-                self.logger.log(self.logger.error, "%s : Problem found when training model, this classifier might be a regressor:\n%s\nIf it is, use 'regressor' option in configuration file" % (self.node_name, self.model))
-                self.logger.log(self.logger.error, "%s : %s" % (self.node_name, err), True)
+                self.logger.log("%s : Problem found when training model, this classifier might be a regressor:\n%s\nIf it is, use 'regressor' option in configuration file" % (self.node_name, self.model), self.logger.error)
+                self.logger.log("%s : %s" % (self.node_name, err), self.logger.error, True)
                 exit()
             except TypeError:
-                self.logger.log(self.logger.error, "%s : Problem found when training model, this classifier might not be unsupervised:\n%s" % (self.node_name, self.model))
+                self.logger.log("%s : Problem found when training model, this classifier might not be unsupervised:\n%s" % (self.node_name, self.model), self.logger.error)
                 exit()
             self.save_model(self.saved_model_file, self.model)
+        self.logger.log("%s model: %s" % (self.node_name, self.classifier), self.logger.normal, True)
         return self.model
 
     def predict(self, test_data):
         '''Apply a created model to given test_data (tuple with data input and data labels) and return predicted classification'''
 
         if not self.model:
-            self.logger.log(self.logger.error, "%s : The model hasn't been trained or loaded yet. Run NodeModel.train" % self.node_name)
+            self.logger.log("%s : The model hasn't been trained or loaded yet. Run NodeModel.train" % self.node_name, self.logger.error)
             exit()
         X_test, y_test, _, flow_ids = test_data
         # apply network to the test data
@@ -207,14 +208,14 @@ class NodeModel:
             try:
                 X_test = scaler.transform(X_test) # normalize
             except ValueError as err:
-                self.logger.log(self.logger.error, "%s : Transforming with scaler. %s" % (self.node_name, err))
+                self.logger.log("%s : Transforming with scaler. %s" % (self.node_name, err), self.logger.error)
                 exit()
 
-        self.logger.log(self.logger.normal, "%s : Predicting on #%d samples" % (self.node_name, len(X_test)), self.verbose)
+        self.logger.log("%s : Predicting on #%d samples" % (self.node_name, len(X_test)), self.logger.normal, self.verbose)
         try:
             y_predicted = self.model.predict(X_test)
         except ValueError as err:
-            self.logger.log(self.logger.error, "%s : Predicting. %s" % (self.node_name, err))
+            self.logger.log("%s : Predicting. %s" % (self.node_name, err), self.logger.error)
             exit()
 
         if not self.use_regressor and not self.unsupervised:
