@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# tcp flow definition was not simple to achieve. It may still present errors in extreme cases, but it is working really well as far as I can tell
-# creator: joao meira (joao.meira@tekever.com)
+#!/usr/bin/env python3
+
 from __future__ import print_function
 import dpkt
 import numpy as np
