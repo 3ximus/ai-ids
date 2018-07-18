@@ -25,9 +25,9 @@ counter=1
 while [ 1==1 ]
 do
 	now_date=$(echo $(date) | sed -e 's/\ /-/g')
-	./capture.sh "$interface" "$cap_duration" "$pcap_dir" "$counter" "$now_date"
+	./scripts/capture.sh "$interface" "$cap_duration" "$pcap_dir" "$counter" "$now_date"
 	echo "Background task: detecting intrusions"
-	./detect_intrusions.sh "$pcap_dir" "$csv_dir" "$alert_dir" "$counter" "$now_date" &> /dev/null & 	# background task with no output
+	./scripts/detect_intrusions.sh "$pcap_dir" "$csv_dir" "$alert_dir" "$counter" "$now_date" &> /dev/null & 	# background task with no output
 	pid_buf+=("$!")
 	counter=$(($counter+1))
 done

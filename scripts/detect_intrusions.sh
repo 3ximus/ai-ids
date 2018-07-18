@@ -21,7 +21,7 @@ python flows.py "$pcap_file" --verbose --out-dir "${csv_dir}/"		# default label:
 if [ -e "$csv_file" ]
 then
 	echo "Testing capture file ${counter} for intrusions..."
-	python classifier_2levels.py -i "$csv_file" --show-comms-only --alert-file "$alert_file"
+	python3 flow_classifier.py -i "$csv_file" --show-dialogues-only --alert-file "$alert_file"
 
 	if [ -s "${alert_file}_level3.txt" ]			# check if alert file has content
 	then

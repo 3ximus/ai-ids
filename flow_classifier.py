@@ -24,7 +24,7 @@ except ImportError: import ConfigParser as configparser # for python2
 op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
 op.add_argument('-i', '--input', metavar='FILE', dest='input', help='csv file with all features to test. If none is given stdin is read')
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
-op.add_argument('-z', '--show-comms-only', action='store_true', help="show communication information only", dest='show_comms')
+op.add_argument('-z', '--show-dialogues-only', action='store_true', help="show dialogue information only", dest='show_dialogues')
 op.add_argument('-v', '--verbose', action='store_true', help="Verbose output.", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='configs/ids.cfg')
 op.add_argument('-a', '--alert-file', help="alert file", dest='alert_file', default='alerts')
@@ -122,11 +122,11 @@ for t in threading.enumerate(): # wait for the remaining threads
 #   PRINT FINAL STATS
 # =====================
 
-def flow_id_to_communication_id(flow_id):
+def flow_id_to_dialogue_id(flow_id):
     splitted_flow_id = flow_id.split('-')
     return splitted_flow_id[0] + '-' + splitted_flow_id[2]
 
-if not args.show_comms:
+if not args.show_dialogues:
     if args.input: print(os.path.basename(args.input))
     print("\033[1;36m    LAYER 1\033[m")
     print(l1.stats)
@@ -142,38 +142,38 @@ if not args.show_comms:
             print(l2_nodes[node].stats)
             l2_nodes[node].logger.log(l2_nodes[node].stats)
 else:
-    communications = dict()
+    dialogues = dict()
     for flow_id in flow_results:
-        communication_id = flow_id_to_communication_id(flow_id)
-        if communication_id in communications.keys():
-            communications[communication_id].append(flow_results[flow_id])
+        dialogue_id = flow_id_to_dialogue_id(flow_id)
+        if dialogue_id in dialogues.keys():
+            dialogues[dialogue_id].append(flow_results[flow_id])
         else:
-            communications[communication_id] = [flow_results[flow_id]]
+            dialogues[dialogue_id] = [flow_results[flow_id]]
     of1 = open(args.alert_file+"_level1.txt","w")
     of2 = open(args.alert_file+"_level2.txt","w")
     of3 = open(args.alert_file+"_level3.txt","w")
-    for comm in communications:
-        fastdos_count = communications[comm].count([0,1])
-        portscan_count = communications[comm].count([1,1])
-        bruteforce_count = communications[comm].count([2,1])
+    for dialogue in dialogues:
+        fastdos_count = dialogues[dialogue].count([0,1])
+        portscan_count = dialogues[dialogue].count([1,1])
+        bruteforce_count = dialogues[dialogue].count([2,1])
         malign_count = fastdos_count + portscan_count + bruteforce_count
-        benign_count = communications[comm].count([0,0]) + communications[comm].count([1,0]) + communications[comm].count([2,0])
+        benign_count = dialogues[dialogue].count([0,0]) + dialogues[dialogue].count([1,0]) + dialogues[dialogue].count([2,0])
         benign_ratio = benign_count*1.0/(benign_count+malign_count)
         if args.verbose:
             print("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nBenign ratio: %f" %
-                    (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, benign_ratio))
+                    (dialogue, fastdos_count, portscan_count, bruteforce_count, benign_count, benign_ratio))
         # alerts level 1 (very suspicious)
         if benign_ratio<=0.2 and (benign_count+malign_count)>=ALERT_LOWER_BOUND_FLOWS:
             of1.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
-                    (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
+                    (dialogue, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
         # alerts level 2 (suspicious)
         elif malign_count>=ALERT_LOWER_BOUND_FLOWS:
             of2.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
-                    (comm, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
-        # alerts level 3 (unusual communication rate), this alert level doesn't rely on the flow classifier to get everything right
+                    (dialogue, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
+        # alerts level 3 (unusual flow rate in a dialogue), this alert level doesn't rely on the flow classifier to detect possible attacks
         elif (malign_count+benign_count)>=ALERT_LOWER_BOUND_FLOWS:
             of3.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nCertainty: %f%%\n" %
-                    (comm, fastdos_count, portscan_count, bruteforce_count, benign_count, (1-benign_ratio)*100))
+                    (dialogue, fastdos_count, portscan_count, bruteforce_count, benign_count, (1-benign_ratio)*100))
 
     of1.close()
     of2.close()
