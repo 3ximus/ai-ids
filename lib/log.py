@@ -36,6 +36,20 @@ class Stats:
         self.confusion_matrix = numpy.matrix([[0 for x in range(len(node.outputs))] for x in range(len(node.outputs))])
         self.lock = threading.Lock()
 
+    @staticmethod
+    def calculate_metrics(tp, tn, fp, fn, total, rep_str):
+        rep_str += "Overall Acc = \033[34m%4f\033[m\n" % (float(tp+tn)/total)
+        if tp+fn:
+            rep_str += "Recall = %4f\n" % (float(tp)/(tp+fn))
+            rep_str += "Miss Rate = %4f\n" % (float(fn)/(tp+fn))
+        if tn+fp:
+            rep_str += "Specificity = %4f\n" % (float(tn)/(tn+fp))
+            rep_str += "Fallout = %4f\n" % (float(fp)/(tn+fp))
+        if tp+fp: rep_str += "Precision = %4f\n" % (float(tp)/(tp+fp))
+        if tp+fp+fn: rep_str += "F1 score = %4f\n" % (float(2*tp)/(2*tp+fp+fn))
+        if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (float((tp*tn)-(fp*fn))/numpy.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn)))
+        return rep_str
+
     def update(self, y_predicted, y_test):
         '''Update stats values with more results. Thread safe.
 
@@ -70,17 +84,34 @@ class Stats:
                     tn, fp, fn, tp = numpy.ravel(self.confusion_matrix)
                 else:
                     tp, fn, fp, tn = numpy.ravel(self.confusion_matrix)
+                rep_str = self.calculate_metrics(tp, tn, fp, fn, self.n, rep_str)
 
-                rep_str += "Overall Acc = \033[34m%4f\033[m\n" % (float(tp+tn)/float(self.n))
-                if tp+fn:
-                    rep_str += "Recall = %4f\n" % (float(tp)/float(tp+fn))
-                    rep_str += "Miss Rate = %4f\n" % (float(fn)/(tp+fn))
-                if tn+fp:
-                    rep_str += "Specificity = %4f\n" % (float(tn)/float(tn+fp))
-                    rep_str += "Fallout = %4f\n" % (float(fp)/float(tn+fp))
-                if tp+fp: rep_str += "Precision = %4f\n" % (float(tp)/float(tp+fp))
-                if tp+fp+fn: rep_str += "F1 score = %4f\n" % (float(2*tp)/float(2*tp+fp+fn))
-                if (tp+fp)*(tp+fn)*(tn+fp)*(tn+fn): rep_str += "Mcc = %4f\n" % (float((tp*tn)-(fp*fn))/float(numpy.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))))
+            elif len(self.node.attack_keys) == 3: # Layer-1 three labels
+                dos_dos, dos_ps, dos_bf, ps_dos, ps_ps, ps_bf, bf_dos, bf_ps, bf_bf = numpy.ravel(self.confusion_matrix)
+                # fastdos-portscan
+                tp_dos_ps = dos_dos
+                tn_dos_ps = ps_ps
+                fp_dos_ps = ps_dos
+                fn_dos_ps = dos_ps
+                total_dos_ps = dos_dos + ps_ps + ps_dos + dos_ps
+                rep_str+= "\033[1;33mfastdos-portscan accuracy:\033[m\n"
+                rep_str = self.calculate_metrics(tp_dos_ps, tn_dos_ps, fp_dos_ps, fn_dos_ps, total_dos_ps, rep_str)
+                # fastdos-bruteforce
+                tp_dos_bf = dos_dos
+                tn_dos_bf = bf_bf
+                fp_dos_bf = bf_dos
+                fn_dos_bf = dos_bf
+                total_dos_bf = dos_dos + bf_bf + bf_dos + dos_bf
+                rep_str+= "\033[1;33mfastdos-bruteforce accuracy:\033[m\n"
+                rep_str = self.calculate_metrics(tp_dos_bf, tn_dos_bf, fp_dos_bf, fn_dos_bf, total_dos_bf, rep_str)
+                # portscan-bruteforce
+                tp_ps_bf = ps_ps
+                tn_ps_bf = bf_bf
+                fp_ps_bf = bf_ps
+                fn_ps_bf = ps_bf
+                total_ps_bf = ps_ps + bf_bf + bf_ps + ps_bf
+                rep_str+= "\033[1;33mportscan-bruteforce accuracy:\033[m\n"
+                rep_str = self.calculate_metrics(tp_ps_bf, tn_ps_bf, fp_ps_bf, fn_ps_bf, total_ps_bf, rep_str)
 
             # unidentified
             diag = sum(numpy.diag(self.confusion_matrix))

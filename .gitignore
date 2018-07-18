@@ -11,9 +11,6 @@ dist
 new
 running_ids
 results
-alerts_level1.txt
-alerts_level2.txt
-alerts_level3.txt
 
 # data
 csv/*
@@ -25,6 +22,8 @@ results/*
 
 saved_neural_networks/*
 log/*
+configs/test/*
+alerts*
 
 # virtual environment
 IDS/*
