@@ -17,7 +17,7 @@ class Logger:
 
     def __init__(self):
         if not os.path.isdir('log'): os.makedirs('log')
-        self.log_file = open('log/classifier_2levels_run_%d.log' % time.time(),'a')
+        self.log_file = open('log/classifier_%d.log' % time.time(),'a')
         self.lock = threading.Lock()
 
     def log(self, message, color='', verbose=False):

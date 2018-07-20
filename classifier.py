@@ -2,7 +2,6 @@
 
 """This file contains the double layered classifier
 
-
 AUTHORS:
 
 Joao Meira <joao.meira@tekever.com>

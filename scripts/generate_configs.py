@@ -1,7 +1,7 @@
 import configparser, os
 
 
-BASEDIR = '../configs/')
+BASEDIR = 'configs/'
 
 conf = configparser.ConfigParser(allow_no_value=True)
 conf.optionxform=str
