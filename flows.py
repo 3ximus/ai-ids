@@ -1,6 +1,13 @@
-#!/usr/bin/env python
-# tcp flow definition was not simple to achieve. It may still present errors in extreme cases, but it is working really well as far as I can tell
-# creator: joao meira (joao.meira@tekever.com)
+#!/usr/bin/env python3
+
+"""This file contains the extraction tool to convert pcap files into a dataset format
+
+AUTHORS:
+
+Joao Meira <joao.meira@tekever.com>
+Fabio Almeida <fabio.4335@gmail.com>
+"""
+
 from __future__ import print_function
 import dpkt
 import numpy as np
@@ -8,7 +15,6 @@ import os, sys, time, datetime, socket, argparse
 
 from dpkt.compat import compat_ord
 from collections import OrderedDict
-from progress.bar import Bar
 
 
 # =====================
