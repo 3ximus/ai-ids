@@ -8,7 +8,6 @@ Joao Meira <joao.meira@tekever.com>
 Fabio Almeida <fabio.4335@gmail.com>
 """
 
-from __future__ import print_function
 import dpkt
 import numpy as np
 import os, sys, time, datetime, socket, argparse

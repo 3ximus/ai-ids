@@ -8,13 +8,11 @@ Joao Meira <joao.meira@tekever.com>
 Fabio Almeida <fabio.4335@gmail.com>
 """
 
-from __future__ import print_function
 import os, argparse, re, sys
 import numpy as np
 from lib.node import NodeModel
 import threading
-try: import configparser
-except ImportError: import ConfigParser as configparser # for python2
+import configparser
 
 # =====================
 #     CLI OPTIONS

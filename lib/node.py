@@ -6,7 +6,6 @@ Joao Meira <joao.meira@tekever.com>
 Fabio Almeida <fabio.4335@gmail.com>
 """
 
-from __future__ import print_function
 import os, pickle, hashlib
 from lib.log import Stats, Logger
 import numpy as np
@@ -19,7 +18,6 @@ class NodeModel:
 
         self.verbose = verbose
         self.node_name = node_name
-        self.message_buffer = [] # buffer for error messages
 
         # get options
         self.attack_keys   = config.options(config.get(node_name, 'labels'))
@@ -29,7 +27,7 @@ class NodeModel:
         self.outputs       = dict(zip(self.attack_keys, outputs))
         self.force_train   = config.has_option(node_name, 'force_train')
         self.use_regressor = config.has_option(node_name, 'regressor')
-        self.unsupervised = config.has_option(node_name, 'unsupervised')
+        self.unsupervised  = config.has_option(node_name, 'unsupervised')
         self.save_path     = config.get(node_name, 'saved-model-path')
 
         if self.use_regressor or self.unsupervised: # generate outputs for unsupervised or regressor models
@@ -59,7 +57,6 @@ class NodeModel:
         model_file = open(filename,'wb')
         pickle.dump(clfmodel, model_file)
         model_file.close()
-        return
 
     @staticmethod
     def load_model(filename):

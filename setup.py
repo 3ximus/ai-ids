@@ -10,7 +10,7 @@ buildOptions = dict(
 			'numpy', 'scipy', 'sklearn',
 			'certifi', 'chardet', 'decorator',
 			'idna', 'jsonschema', 'nbformat',
-			'numpy', 'pandas', 'plotly',
+			'numpy', 'plotly',
 			'pytz', 'scipy', 'six',
 			'traitlets', 'urllib3',
 			# local modules
