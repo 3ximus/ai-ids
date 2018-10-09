@@ -8,6 +8,7 @@ Fabio Almeida <fabio.4335@gmail.com>
 
 import os, pickle, hashlib
 from lib.log import Stats, Logger
+from sklearn.decomposition import PCA
 import numpy as np
 
 class NodeModel:
@@ -43,6 +44,7 @@ class NodeModel:
                                     if config.has_option(node_name, 'classifier-module') else None
 
         self.model = None # leave uninitialized (run self.train)
+        self.fs_model = None
         self.saved_model_file = None
         self.saved_scaler_file = None
         self.stats = Stats(self)
@@ -159,8 +161,16 @@ class NodeModel:
         else:
             # CREATE NEW MODEL
 
+
             with open(train_filename, 'r') as fd:
                 X_train, y_train, _, _ = self.parse_csvdataset(fd)
+
+            # Feature Selection
+            self.fs_model = PCA(n_components=45)
+            self.fs_model.fit(X_train)
+
+            X_train = self.fs_model.transform(X_train)
+
             # scaler setup
             if self.scaler_module:
                 exec('import '+ self.scaler_module) # import scaler module
@@ -199,6 +209,10 @@ class NodeModel:
             self.logger.log("%s : The model hasn't been trained or loaded yet. Run NodeModel.train" % self.node_name, self.logger.error)
             exit()
         X_test, y_test, _, flow_ids = test_data
+
+        # apply feature selection transformation to test data
+        X_test = self.fs_model.transform(X_test)
+
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
             scaler = self.load_model(self.saved_scaler_file)
