@@ -8,7 +8,6 @@ Fabio Almeida <fabio.4335@gmail.com>
 
 import os, pickle, hashlib
 from lib.log import Stats, Logger
-from sklearn.decomposition import PCA
 import numpy as np
 
 class NodeModel:
@@ -37,15 +36,19 @@ class NodeModel:
         self.label_map     = dict(config.items(config.get(node_name, 'labels-map'))) if config.has_option(node_name, 'labels-map') else dict()
 
         # model settings
-        self.scaler            = config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None
-        self.scaler_module     = config.get(node_name, 'scaler-module') if config.has_option(node_name, 'scaler-module') else None
-        self.classifier        = config.get(node_name, 'classifier')
-        self.classifier_module = config.get(node_name, 'classifier-module') \
-                                    if config.has_option(node_name, 'classifier-module') else None
+        self.classifier               = config.get(node_name, 'classifier')
+        self.classifier_module        = config.get(node_name, 'classifier-module') if config.has_option(node_name, 'classifier-module') else None
+
+        self.feature_selection        = config.get(node_name, 'feature-selection') if config.has_option(node_name, 'feature-selection') else None
+        self.feature_selection_module = config.get(node_name, 'feature-selection-module') if config.has_option(node_name, 'feature-selection-module') else None
+
+        self.scaler                   = config.get(node_name, 'scaler') if config.has_option(node_name, 'scaler') else None
+        self.scaler_module            = config.get(node_name, 'scaler-module') if config.has_option(node_name, 'scaler-module') else None
+
 
         self.model = None # leave uninitialized (run self.train)
-        self.fs_model = None
         self.saved_model_file = None
+        self.saved_feature_selection_file = None
         self.saved_scaler_file = None
         self.stats = Stats(self)
         self.logger = Logger()
@@ -153,6 +156,7 @@ class NodeModel:
         # generate model filename
         self.saved_model_file = self.gen_saved_model_pathname(self.save_path, train_filename, self.classifier)
         self.saved_scaler_file = (os.path.dirname(self.saved_model_file) + '/scalerX_' + self.node_name) if self.scaler else None
+        self.saved_feature_selection_file = (os.path.dirname(self.saved_model_file) + '/FeatureSelection_' + self.node_name) if self.feature_selection else None
 
         if os.path.isfile(self.saved_model_file) and not disable_load and not self.force_train:
             # LOAD MODEL
@@ -160,16 +164,16 @@ class NodeModel:
             self.model = self.load_model(self.saved_model_file)
         else:
             # CREATE NEW MODEL
-
-
             with open(train_filename, 'r') as fd:
                 X_train, y_train, _, _ = self.parse_csvdataset(fd)
 
-            # Feature Selection
-            self.fs_model = PCA(n_components=45)
-            self.fs_model.fit(X_train)
-
-            X_train = self.fs_model.transform(X_train)
+            # feature selection
+            if self.feature_selection_module:
+                exec('import '+ self.feature_selection_module) # import feature selection module
+            if self.feature_selection:
+                fs_model = eval(self.feature_selection).fit(X_train)
+                X_train = fs_model.transform(X_train) # apply dimension reduction
+                self.save_model(self.saved_feature_selection_file, fs_model)
 
             # scaler setup
             if self.scaler_module:
@@ -211,7 +215,13 @@ class NodeModel:
         X_test, y_test, _, flow_ids = test_data
 
         # apply feature selection transformation to test data
-        X_test = self.fs_model.transform(X_test)
+        if self.saved_feature_selection_file and os.path.isfile(self.saved_feature_selection_file):
+            fs_model = self.load_model(self.saved_feature_selection_file)
+            try:
+                X_test = fs_model.transform(X_test) # dimension reduction
+            except ValueError as err:
+                self.logger.log("%s : Performing feature selection. %s" % (self.node_name, err), self.logger.error)
+                exit()
 
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
