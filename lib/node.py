@@ -167,14 +167,6 @@ class NodeModel:
             with open(train_filename, 'r') as fd:
                 X_train, y_train, _, _ = self.parse_csvdataset(fd)
 
-            # feature selection
-            if self.feature_selection_module:
-                exec('import '+ self.feature_selection_module) # import feature selection module
-            if self.feature_selection:
-                fs_model = eval(self.feature_selection).fit(X_train)
-                X_train = fs_model.transform(X_train) # apply dimension reduction
-                self.save_model(self.saved_feature_selection_file, fs_model)
-
             # scaler setup
             if self.scaler_module:
                 exec('import '+ self.scaler_module) # import scaler module
@@ -182,6 +174,14 @@ class NodeModel:
                 scaler = eval(self.scaler).fit(X_train)
                 X_train = scaler.transform(X_train)    # normalize
                 self.save_model(self.saved_scaler_file, scaler)
+
+            # feature selection
+            if self.feature_selection_module:
+                exec('import '+ self.feature_selection_module) # import feature selection module
+            if self.feature_selection:
+                fs_model = eval(self.feature_selection).fit(X_train)
+                X_train = fs_model.transform(X_train) # apply dimension reduction
+                self.save_model(self.saved_feature_selection_file, fs_model)
 
             # classifier setup
             if self.classifier_module:
@@ -214,15 +214,6 @@ class NodeModel:
             exit()
         X_test, y_test, _, flow_ids = test_data
 
-        # apply feature selection transformation to test data
-        if self.saved_feature_selection_file and os.path.isfile(self.saved_feature_selection_file):
-            fs_model = self.load_model(self.saved_feature_selection_file)
-            try:
-                X_test = fs_model.transform(X_test) # dimension reduction
-            except ValueError as err:
-                self.logger.log("%s : Performing feature selection. %s" % (self.node_name, err), self.logger.error)
-                exit()
-
         # apply network to the test data
         if self.saved_scaler_file and os.path.isfile(self.saved_scaler_file):
             scaler = self.load_model(self.saved_scaler_file)
@@ -230,6 +221,15 @@ class NodeModel:
                 X_test = scaler.transform(X_test) # normalize
             except ValueError as err:
                 self.logger.log("%s : Transforming with scaler. %s" % (self.node_name, err), self.logger.error)
+                exit()
+
+        # apply feature selection transformation to test data
+        if self.saved_feature_selection_file and os.path.isfile(self.saved_feature_selection_file):
+            fs_model = self.load_model(self.saved_feature_selection_file)
+            try:
+                X_test = fs_model.transform(X_test) # dimension reduction
+            except ValueError as err:
+                self.logger.log("%s : Performing feature selection. %s" % (self.node_name, err), self.logger.error)
                 exit()
 
         self.logger.log("%s : Predicting on #%d samples" % (self.node_name, len(X_test)), self.logger.normal, self.verbose)
