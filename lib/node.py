@@ -51,7 +51,7 @@ class NodeModel:
         self.saved_feature_selection_file = None
         self.saved_scaler_file = None
         self.stats = Stats(self)
-        self.logger = Logger()
+        self.logger = Logger(config.get('ids', 'log-dir'))
 
 
     @staticmethod

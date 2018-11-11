@@ -4,26 +4,16 @@
 # build
 build/*
 
-# link
-csv
-pcap
-dist
-new
-running_ids
-results
+# Database
+PCAP
+DATA
 
-# data
-csv/*
-pcap/*
-dist/*
-new/*
-running_ids/*
-results/*
+PCAP/*
+DATA/*
 
 saved_neural_networks/*
 log/*
 configs/test/*
-alerts*
 
 # virtual environment
 IDS/*

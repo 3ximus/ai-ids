@@ -15,9 +15,9 @@ class Logger:
     warning = '[\033[1;33mWARNING\033[m]'
     normal = '[\033[1;34m LOG \033[m]'
 
-    def __init__(self):
-        if not os.path.isdir('log'): os.makedirs('log')
-        self.log_file = open('log/classifier_%d.log' % time.time(),'a')
+    def __init__(self, log_path):
+        if not os.path.isdir(log_path): os.makedirs(log_path)
+        self.log_file = open(log_path + '/classifier_%d.log' % time.time(),'a')
         self.lock = threading.Lock()
 
     def log(self, message, color='', verbose=False):
