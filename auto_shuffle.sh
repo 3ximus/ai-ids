@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-malign_traindir="new/train/malign/"
-benign_traindir="new/train/benign/"
-l1dir="new/train/layer1/"
-l2dir="new/train/layer2/"
+malign_traindir="DATA/train/malign/"
+benign_traindir="DATA/train/benign/"
+l1dir="DATA/train/layer1/"
+l2dir="DATA/train/layer2/"
 
 
 # selected malign/benign for training
