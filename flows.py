@@ -73,10 +73,7 @@ def inet_to_str(inet):
 
 # PROCESS PCAP
 def process_pcap(file):
-    total_n_pkts = sum(1 for pkt in dpkt.pcap.Reader(file))
-    file.seek(0)
     pcap = dpkt.pcap.Reader(file)
-    n_pkts=0
     n_tcp=0
     n_udp=0
     packet_properties=[]
@@ -101,7 +98,6 @@ def process_pcap(file):
         transport_protocol_name=type(transport_layer).__name__
 
         if transport_protocol_name in ('TCP'):
-            n_pkts+=1
             if transport_protocol_name=='TCP':
                 n_tcp+=1
                 transport_protocol_code=6
@@ -133,7 +129,7 @@ def process_pcap(file):
                 pkt_size = pkt_len - header_len                         # ethernet zero-byte padding until 64 bytes are reached
 
             if pkt_size!=len(transport_layer.data) and args.check_transport_data_length:
-                print("Error on packet no." + str(n_pkts) + ".Packet size should always correspond to tcp data length.", file=sys.stderr)
+                print("Error on packet no." + str(n_udp + n_tcp) + ".Packet size should always correspond to tcp data length.", file=sys.stderr)
                 print(len(transport_layer.data),'!=',pkt_size, file=sys.stderr)
                 exit()
 
@@ -144,21 +140,19 @@ def process_pcap(file):
             packet_properties.append(packet_info)
             # eventually_useful = (mac_addr(eth.src),mac_addr(eth.dst),eth.type,fragment_offset)
     if args.verbose:
-        print('Number of UDP packets:',n_udp, file=sys.stderr)
-        print('Number of TCP packets:',n_tcp, file=sys.stderr)
-        print('Total number of packets:',n_pkts, file=sys.stderr)
+        print('Total number of packets: %d [TCP %d | UDP %d ]' % (n_udp + n_tcp, n_tcp, n_udp), file=sys.stderr)
     return packet_properties
 
 def build_uniflows(packet_properties):
     #associate uniflow_ids to packets
     uniflows = dict()
     uniflow_ids = []
-    for propertie in packet_properties:
-        uniflow_ids.append(propertie[0])
-        if propertie[0] in uniflows:
-            uniflows[propertie[0]].append(propertie)
+    for prop in packet_properties:
+        uniflow_ids.append(prop[0])
+        if prop[0] in uniflows:
+            uniflows[prop[0]].append(prop)
         else:
-            uniflows[propertie[0]]=[propertie]
+            uniflows[prop[0]]=[prop]
     uniflow_ids=list(OrderedDict.fromkeys(uniflow_ids))             #remove duplicates mantaining order
     if args.verbose:
         print('Number of unidirectional flows (w/o flag separation):',len(uniflow_ids), file=sys.stderr)

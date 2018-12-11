@@ -25,7 +25,7 @@ with open(sys.argv[2], "r") as main_file:
 	with open(sys.argv[2]+'.new','w') as replacement_file:
 		replacement_file.write(next(main_file)) # write header
 		for line in main_file:
-			if any([line.startswith(k) for k in tags if 'Attack' in tags[ip]]):
+			if any(line.startswith(k) for k in tags if 'Attack' in tags[ip]):
 				line = line.replace('unknown', sys.argv[3])
 			else:
 				line = line.replace('unknown', 'BENIGN')
