@@ -5,7 +5,7 @@
 AUTHORS:
 
 Joao Meira <joao.meira@tekever.com>
-Fabio Almeida <fabio.4335@gmail.com>
+Fabio Almeida <fabio4335@gmail.com>
 """
 
 import dpkt

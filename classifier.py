@@ -5,7 +5,7 @@
 AUTHORS:
 
 Joao Meira <joao.meira@tekever.com>
-Fabio Almeida <fabio.4335@gmail.com>
+Fabio Almeida <fabio4335@gmail.com>
 """
 
 import os, argparse, re, sys
@@ -47,7 +47,7 @@ ALERT_LOWER_BOUND_FLOWS = conf.getint('ids', 'lower-bound-flows')
 
 # verifiy configuration integrity
 l2_sections = [s for s in conf.sections() if re.match('l2-.+', s)]
-if not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
+if l2_sections and not len(L2_NODE_NAMES) == len(conf.options('labels-l1')) == len(l2_sections):
     print("Number of l1 output labels and l2 nodes don't match in config file %s" % args.config_file)
     exit()
 if not all([(item[0] == item[1][item[1].find('-')+1:] == item[2][item[2].find('-')+1:]) for item in zip(conf.options('labels-l1'), L2_NODE_NAMES, l2_sections)]):
@@ -81,7 +81,6 @@ def predict_chunk(test_data):
     for i, fl_id in enumerate(flow_ids):
         flow_results[fl_id] = [labels_index[i]]
 
-    # OUTPUT DATA PARTITION TO FEED LAYER 2
     # ignore test_data[1] since its only used for l1 crossvalidation
     filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
                                np.take(test_data[2], np.where(labels_index == x)[0], axis=0), # labels

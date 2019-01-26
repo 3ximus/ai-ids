@@ -3,7 +3,7 @@
 AUTHORS:
 
 Joao Meira <joao.meira@tekever.com>
-Fabio Almeida <fabio.4335@gmail.com>
+Fabio Almeida <fabio4335@gmail.com>
 """
 
 from sklearn.metrics import accuracy_score, confusion_matrix
