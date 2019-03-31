@@ -87,31 +87,15 @@ class Stats:
                 rep_str = self.calculate_metrics(tp, tn, fp, fn, self.n, rep_str)
 
             elif len(self.node.attack_keys) == 3: # Layer-1 three labels
-                dos_dos, dos_ps, dos_bf, ps_dos, ps_ps, ps_bf, bf_dos, bf_ps, bf_bf = numpy.ravel(self.confusion_matrix)
-                # fastdos-portscan
-                tp_dos_ps = dos_dos
-                tn_dos_ps = ps_ps
-                fp_dos_ps = ps_dos
-                fn_dos_ps = dos_ps
-                total_dos_ps = dos_dos + ps_ps + ps_dos + dos_ps
-                rep_str+= "\033[1;33mfastdos-portscan accuracy:\033[m\n"
-                rep_str = self.calculate_metrics(tp_dos_ps, tn_dos_ps, fp_dos_ps, fn_dos_ps, total_dos_ps, rep_str)
-                # fastdos-bruteforce
-                tp_dos_bf = dos_dos
-                tn_dos_bf = bf_bf
-                fp_dos_bf = bf_dos
-                fn_dos_bf = dos_bf
-                total_dos_bf = dos_dos + bf_bf + bf_dos + dos_bf
-                rep_str+= "\033[1;33mfastdos-bruteforce accuracy:\033[m\n"
-                rep_str = self.calculate_metrics(tp_dos_bf, tn_dos_bf, fp_dos_bf, fn_dos_bf, total_dos_bf, rep_str)
-                # portscan-bruteforce
-                tp_ps_bf = ps_ps
-                tn_ps_bf = bf_bf
-                fp_ps_bf = bf_ps
-                fn_ps_bf = ps_bf
-                total_ps_bf = ps_ps + bf_bf + bf_ps + ps_bf
-                rep_str+= "\033[1;33mportscan-bruteforce accuracy:\033[m\n"
-                rep_str = self.calculate_metrics(tp_ps_bf, tn_ps_bf, fp_ps_bf, fn_ps_bf, total_ps_bf, rep_str)
+                #print(list(range(len(self.node.attack_keys))))
+                for i, label in enumerate(self.node.attack_keys):
+                   tp = self.confusion_matrix[i,i] 
+                   other_indexes = [k for k in range(len(self.node.attack_keys)) if k != i]
+                   tn = sum([self.confusion_matrix[k,j] for k in other_indexes for j in other_indexes])
+                   fp = sum([self.confusion_matrix[k,i] for k in other_indexes])
+                   fn = sum([self.confusion_matrix[i,k] for k in other_indexes])
+                   rep_str+= "\033[1;33m%s stats:\033[m\n" % label
+                   rep_str = self.calculate_metrics(tp, tn, fp, fn, self.n, rep_str)
 
             # unidentified
             diag = sum(numpy.diag(self.confusion_matrix))

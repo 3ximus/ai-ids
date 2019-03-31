@@ -21,7 +21,6 @@ import configparser
 op = argparse.ArgumentParser(description="Multilayered AI traffic classifier")
 op.add_argument('-i', '--input', metavar='FILE', dest='input', help='csv file with test data. If none is given stdin is read')
 op.add_argument('-d', '--disable-load', action='store_true', help="disable loading of previously created models", dest='disable_load')
-op.add_argument('-z', '--show-dialogues-only', action='store_true', help="show dialogue information only", dest='show_dialogues')
 op.add_argument('-v', '--verbose', action='store_true', help="Verbose output.", dest='verbose')
 op.add_argument('-c', '--config-file', help="configuration file", dest='config_file', default='configs/ids.cfg')
 op.add_argument('-a', '--alert-file', help="alert file", dest='alert_file', default='alerts')
@@ -78,8 +77,6 @@ def predict_chunk(test_data):
 
     # OUTPUT DATA PARTITION TO FEED LAYER 2
     labels_index = np.argmax(y_predicted, axis=1) if not l1.use_regressor else y_predicted
-    for i, fl_id in enumerate(flow_ids):
-        flow_results[fl_id] = [labels_index[i]]
 
     # ignore test_data[1] since its only used for l1 crossvalidation
     filter_labels = lambda x: [np.take(test_data[0], np.where(labels_index == x)[0], axis=0), # x
@@ -93,8 +90,6 @@ def predict_chunk(test_data):
             current_test_data = l2_nodes[node].process_data(l2_inputs[node][0], l2_inputs[node][1],l2_inputs[node][2])
             y_predicted, flow_ids = l2_nodes[node].predict(current_test_data)
             labels_index = np.argmax(y_predicted, axis=1)
-            for i, fl_id in enumerate(flow_ids):
-                flow_results[fl_id].append(labels_index[i])           # the order wasn't being kept because we are not classifying flows sequentially. Now this fixes it...
     thread_semaphore.release()
 
 
@@ -118,60 +113,17 @@ for t in threading.enumerate(): # wait for the remaining threads
 #   PRINT FINAL STATS
 # =====================
 
-def flow_id_to_dialogue_id(flow_id):
-    splitted_flow_id = flow_id.split('-')
-    return splitted_flow_id[0] + '-' + splitted_flow_id[2]
-
-if not args.show_dialogues:
-    if args.input: print(os.path.basename(args.input))
-    print("\033[1;36m    LAYER 1\033[m")
-    print(l1.stats)
-    l1.logger.log("%s\n" % l1.node_name + str(l1.stats))
+if args.input: print(os.path.basename(args.input))
+print("\033[1;36m    LAYER 1\033[m")
+print(l1.stats)
+l1.logger.log("%s\n" % l1.node_name + str(l1.stats))
 # output counter for l2
-    print("\033[1;36m    LAYER 2\033[m")
-    total = total_correct = total_fp = 0
-    for node in range(len(l2_nodes)):
-        if l2_nodes[node].stats.n > 0:
-            total += l2_nodes[node].stats.n
-            total_correct += l2_nodes[node].stats.total_correct
-            print(L2_NODE_NAMES[node])
-            print(l2_nodes[node].stats)
-            l2_nodes[node].logger.log("%s\n" % l2_nodes[node].node_name + str(l2_nodes[node].stats))
-else:
-    dialogues = dict()
-    for flow_id in flow_results:
-        dialogue_id = flow_id_to_dialogue_id(flow_id)
-        if dialogue_id in dialogues.keys():
-            dialogues[dialogue_id].append(flow_results[flow_id])
-        else:
-            dialogues[dialogue_id] = [flow_results[flow_id]]
-    of1 = open(args.alert_file+"_level1.txt","w")
-    of2 = open(args.alert_file+"_level2.txt","w")
-    of3 = open(args.alert_file+"_level3.txt","w")
-    for dialogue in dialogues:
-        fastdos_count = dialogues[dialogue].count([0,1])
-        portscan_count = dialogues[dialogue].count([1,1])
-        bruteforce_count = dialogues[dialogue].count([2,1])
-        malign_count = fastdos_count + portscan_count + bruteforce_count
-        benign_count = dialogues[dialogue].count([0,0]) + dialogues[dialogue].count([1,0]) + dialogues[dialogue].count([2,0])
-        benign_ratio = benign_count*1.0/(benign_count+malign_count)
-        if args.verbose:
-            print("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nBenign ratio: %f" %
-                    (dialogue, fastdos_count, portscan_count, bruteforce_count, benign_count, benign_ratio))
-        # alerts level 1 (very suspicious)
-        if benign_ratio<=0.2 and (benign_count+malign_count)>=ALERT_LOWER_BOUND_FLOWS:
-            of1.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
-                    (dialogue, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
-        # alerts level 2 (suspicious)
-        elif malign_count>=ALERT_LOWER_BOUND_FLOWS:
-            of2.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nCertainty: %f%%\n" %
-                    (dialogue, fastdos_count, portscan_count, bruteforce_count, (1-benign_ratio)*100))
-        # alerts level 3 (unusual flow rate in a dialogue), this alert level doesn't rely on the flow classifier to detect possible attacks
-        elif (malign_count+benign_count)>=ALERT_LOWER_BOUND_FLOWS:
-            of3.write("%s:\nFastdos: %d\nPortscan: %d\nBruteforce: %d\nBenign: %d\nCertainty: %f%%\n" %
-                    (dialogue, fastdos_count, portscan_count, bruteforce_count, benign_count, (1-benign_ratio)*100))
-
-    of1.close()
-    of2.close()
-    of3.close()
-
+print("\033[1;36m    LAYER 2\033[m")
+total = total_correct = total_fp = 0
+for node in range(len(l2_nodes)):
+	if l2_nodes[node].stats.n > 0:
+		total += l2_nodes[node].stats.n
+		total_correct += l2_nodes[node].stats.total_correct
+		print(L2_NODE_NAMES[node])
+		print(l2_nodes[node].stats)
+		l2_nodes[node].logger.log("%s\n" % l2_nodes[node].node_name + str(l2_nodes[node].stats))
