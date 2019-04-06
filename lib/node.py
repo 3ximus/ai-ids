@@ -151,7 +151,7 @@ class NodeModel:
 			Parameters
 			----------
 			- train_filename	  filename of the train dataset
-			- disable_load		  list of output encodings, maps each index to a discrete binary output
+			- disable_load		  disable load of trained classifier models
 		'''
 		# generate model filename
 		self.saved_model_file = self.gen_saved_model_pathname(self.save_path, train_filename, self.classifier)
