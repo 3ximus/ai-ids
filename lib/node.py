@@ -6,7 +6,7 @@ Joao Meira <joao.meira@tekever.com>
 Fabio Almeida <fabio4335@gmail.com>
 """
 
-import os, pickle, hashlib
+import os, pickle, hashlib, time, sys
 from lib.log import Stats, Logger
 import numpy as np
 
@@ -171,16 +171,20 @@ class NodeModel:
 			if self.scaler_module:
 				exec('import '+ self.scaler_module) # import scaler module
 			if self.scaler:
+				start_time = time.time()
 				scaler = eval(self.scaler).fit(X_train)
 				X_train = scaler.transform(X_train)    # normalize
+				print("%s scaler trained in " % self.node_name + str(time.time() - start_time) + " seconds", file=sys.stderr)
 				self.save_model(self.saved_scaler_file, scaler)
 
 			# feature selection
 			if self.feature_selection_module:
 				exec('import '+ self.feature_selection_module) # import feature selection module
 			if self.feature_selection:
+				start_time = time.time()
 				fs_model = eval(self.feature_selection).fit(X_train)
 				X_train = fs_model.transform(X_train) # apply dimension reduction
+				print("%s FS trained in " % self.node_name + str(time.time() - start_time) + " seconds", file=sys.stderr)
 				self.save_model(self.saved_feature_selection_file, fs_model)
 
 			# classifier setup
@@ -190,6 +194,7 @@ class NodeModel:
 
 			# train and save the model
 			self.logger.log("%s : Training" %  self.node_name, self.logger.normal, True)
+			start_time = time.time()
 			try:
 				if self.unsupervised:
 					self.model.fit(X_train)
@@ -202,6 +207,7 @@ class NodeModel:
 			except TypeError:
 				self.logger.log("%s : Problem found when training model, this classifier might not be unsupervised:\n%s" % (self.node_name, self.model), self.logger.error)
 				exit()
+			print("%s Classifier trained in " % self.node_name + str(time.time() - start_time) + " seconds", file=sys.stderr)
 			self.save_model(self.saved_model_file, self.model)
 		self.logger.log("%s model: %s" % (self.node_name, self.classifier), self.logger.normal, True)
 		return self.model

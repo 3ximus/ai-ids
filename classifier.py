@@ -8,7 +8,7 @@ Joao Meira <joao.meira@tekever.com>
 Fabio Almeida <fabio4335@gmail.com>
 """
 
-import os, argparse, re, sys
+import os, argparse, re, sys, time
 import numpy as np
 from lib.node import NodeModel
 import threading
@@ -101,13 +101,18 @@ thread_semaphore = threading.BoundedSemaphore(value=MAX_THREADS)
 
 if args.verbose: print("Reading Test Dataset in chunks...")
 fd = open(args.input, 'r') if args.input else sys.stdin
+start_time = time.time()
+acc = 0
 for test_data in l1.yield_csvdataset(fd, CHUNK_SIZE): # launch threads
+    acc += len(test_data[0])
     thread = threading.Thread(target=predict_chunk,args=(test_data,))
     thread.start()
+
 if fd != sys.stdin: fd.close()
 for t in threading.enumerate(): # wait for the remaining threads
     if t.getName()!="MainThread":
         t.join()
+print("%d flows predicted in " % acc + str(time.time() - start_time) + " seconds", file=sys.stderr)
 
 # =====================
 #   PRINT FINAL STATS
@@ -121,9 +126,9 @@ l1.logger.log("%s\n" % l1.node_name + str(l1.stats))
 print("\033[1;36m    LAYER 2\033[m")
 total = total_correct = total_fp = 0
 for node in range(len(l2_nodes)):
-	if l2_nodes[node].stats.n > 0:
-		total += l2_nodes[node].stats.n
-		total_correct += l2_nodes[node].stats.total_correct
-		print(L2_NODE_NAMES[node])
-		print(l2_nodes[node].stats)
-		l2_nodes[node].logger.log("%s\n" % l2_nodes[node].node_name + str(l2_nodes[node].stats))
+    if l2_nodes[node].stats.n > 0:
+        total += l2_nodes[node].stats.n
+        total_correct += l2_nodes[node].stats.total_correct
+        print(L2_NODE_NAMES[node])
+        print(l2_nodes[node].stats)
+        l2_nodes[node].logger.log("%s\n" % l2_nodes[node].node_name + str(l2_nodes[node].stats))

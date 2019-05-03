@@ -470,6 +470,8 @@ def print_flows(file):
     start_time = time.time()
 
     packet_properties = process_pcap(file)
+    print("File processed in \033[34m" + str(time.time() - start_time) + "\033[m seconds", file=sys.stderr)
+    start_time = time.time()
     uniflows,uniflow_ids = build_uniflows(packet_properties)
     del(packet_properties)
     duplicates_parsed = parse_duplicates(uniflow_ids)
